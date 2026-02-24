@@ -52,6 +52,42 @@ export const categories = [
                 type: 'number'
             };
         }
+    },
+    {
+        id: 'approximation',
+        name: '概數',
+        description: '四捨五入、無條件進入/捨去',
+        icon: '🎯',
+        color: '#74b9ff',
+        generateQuestion: () => {
+            const methods = [
+                { name: '四捨五入法', fn: (n, unit) => Math.round(n / unit) * unit },
+                { name: '無條件進入法', fn: (n, unit) => Math.ceil(n / unit) * unit },
+                { name: '無條件捨去法', fn: (n, unit) => Math.floor(n / unit) * unit }
+            ];
+            const places = [
+                { name: '十位', unit: 10 },
+                { name: '百位', unit: 100 },
+                { name: '千位', unit: 1000 },
+                { name: '萬位', unit: 10000 }
+            ];
+
+            const method = methods[Math.floor(Math.random() * methods.length)];
+            const place = places[Math.floor(Math.random() * places.length)];
+
+            // Ensure the number is larger than the unit so the question is meaningful
+            const minNum = place.unit + 1;
+            const maxNum = 99999;
+            const num = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+
+            const answer = method.fn(num, place.unit);
+
+            return {
+                text: `${num.toLocaleString()} 以「${method.name}」取概數到${place.name} = ?`,
+                answers: [answer],
+                type: 'number'
+            };
+        }
     }
 ];
 

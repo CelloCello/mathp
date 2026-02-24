@@ -7,9 +7,9 @@
   --color-card: #ffffff;
   --color-success: #84fab0;
   --color-warning: #fccb90;
-  
-  --shadow-sm: 0 4px 6px rgba(0,0,0,0.05);
-  --shadow-md: 0 8px 15px rgba(0,0,0,0.1);
+
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 8px 15px rgba(0, 0, 0, 0.1);
   --border-radius: 20px;
 }
 
@@ -31,7 +31,8 @@ body {
 
 #root {
   width: 100%;
-  max-width: 600px; /* Mobile optimal, looks like a tablet app on desktop */
+  max-width: 800px;
+  /* Mobile optimal, looks like a tablet app on desktop */
   min-height: 100vh;
   background: var(--color-bg);
   position: relative;
@@ -93,8 +94,31 @@ body {
   background-color: var(--color-accent);
   box-shadow: 0 6px 0 #8e7db9;
 }
+
 .btn-secondary:active {
   box-shadow: 0 0 0 #8e7db9;
+}
+
+.btn-nav {
+  background: rgba(161, 140, 209, 0.12);
+  color: var(--color-accent);
+  border: 1.5px solid rgba(161, 140, 209, 0.3);
+  border-radius: 12px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.btn-nav:hover {
+  background: rgba(161, 140, 209, 0.22);
+  border-color: var(--color-accent);
+}
+
+.btn-nav:active {
+  transform: scale(0.95);
 }
 
 /* Cards */
@@ -108,10 +132,118 @@ body {
 
 /* Base animations */
 @keyframes popIn {
-  0% { transform: scale(0.9); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .animate-pop {
   animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Feedback banner */
+.feedback-banner {
+  padding: 15px 20px;
+  border-radius: var(--border-radius);
+  font-size: 1.4rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.feedback-correct {
+  background: #d4f5e2;
+  color: #00b894;
+  border: 2px solid #00b894;
+}
+
+.feedback-wrong {
+  background: #fde8e3;
+  color: #e17055;
+  border: 2px solid #e17055;
+}
+
+/* Wrong answer review */
+.wrong-review-item {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.wrong-review-item:last-child {
+  border-bottom: none;
+}
+
+.wrong-review-question {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+  color: var(--color-text);
+}
+
+.wrong-review-answers {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+}
+
+.wrong-review-user {
+  color: #e17055;
+  font-weight: 600;
+}
+
+.wrong-review-correct {
+  color: #00b894;
+  font-weight: 600;
+}
+
+/* Confirm Dialog */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+}
+
+.confirm-dialog {
+  background: var(--color-card);
+  border-radius: var(--border-radius);
+  padding: 30px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.confirm-message {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-actions .btn {
+  flex: 1;
+  padding: 12px 20px;
+  font-size: 1rem;
 }

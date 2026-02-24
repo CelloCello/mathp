@@ -1,7 +1,7 @@
 import React from 'react';
 
 function SummaryScreen({ result, onRestart }) {
-    const { correct, wrong, total, timeSpentMs } = result;
+    const { correct, wrong, total, timeSpentMs, wrongList = [] } = result;
 
     const accuracy = Math.round((correct / total) * 100);
     const timeSecs = Math.round(timeSpentMs / 1000);
@@ -24,6 +24,21 @@ function SummaryScreen({ result, onRestart }) {
                 <p style={{ margin: '10px 0' }}>⏱ 使用時間: <strong>{mins > 0 ? `${mins}分 ` : ''}{secs}秒</strong></p>
             </div>
 
+            {wrongList.length > 0 && (
+                <div className="card wrong-review" style={{ textAlign: 'left', marginBottom: '30px' }}>
+                    <h3 style={{ textAlign: 'center', marginBottom: '15px', color: '#ff9a9e' }}>❌ 錯誤題目回顧</h3>
+                    {wrongList.map((item, idx) => (
+                        <div key={idx} className="wrong-review-item">
+                            <p className="wrong-review-question">{item.text}</p>
+                            <div className="wrong-review-answers">
+                                <span className="wrong-review-user">你的答案: {item.userAnswer.toLocaleString()}</span>
+                                <span className="wrong-review-correct">正確答案: {item.correctAnswer.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             <button className="btn btn-large" onClick={onRestart}>
                 再來一次 🔄
             </button>
@@ -32,3 +47,4 @@ function SummaryScreen({ result, onRestart }) {
 }
 
 export default SummaryScreen;
+
