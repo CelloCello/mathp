@@ -1,0 +1,117 @@
+:root {
+  --color-bg: #fdf6e3;
+  --color-primary: #ff9a9e;
+  --color-secondary: #fecfef;
+  --color-accent: #a18cd1;
+  --color-text: #4a4a4a;
+  --color-card: #ffffff;
+  --color-success: #84fab0;
+  --color-warning: #fccb90;
+  
+  --shadow-sm: 0 4px 6px rgba(0,0,0,0.05);
+  --shadow-md: 0 8px 15px rgba(0,0,0,0.1);
+  --border-radius: 20px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Nunito', 'Noto Sans TC', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+#root {
+  width: 100%;
+  max-width: 600px; /* Mobile optimal, looks like a tablet app on desktop */
+  min-height: 100vh;
+  background: var(--color-bg);
+  position: relative;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.app-header {
+  text-align: center;
+  padding: 20px 0;
+  margin-bottom: 20px;
+}
+
+.app-header h1 {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--color-accent);
+  text-shadow: 2px 2px 0px var(--color-secondary);
+}
+
+.app-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cute Buttons */
+.btn {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  padding: 15px 30px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 6px 0 #e88a8d;
+  transition: all 0.1s;
+  font-family: inherit;
+}
+
+.btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 #e88a8d;
+}
+
+.btn-large {
+  width: 100%;
+  padding: 20px;
+  font-size: 1.5rem;
+}
+
+.btn-secondary {
+  background-color: var(--color-accent);
+  box-shadow: 0 6px 0 #8e7db9;
+}
+.btn-secondary:active {
+  box-shadow: 0 0 0 #8e7db9;
+}
+
+/* Cards */
+.card {
+  background: var(--color-card);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+}
+
+/* Base animations */
+@keyframes popIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pop {
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
