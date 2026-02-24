@@ -183,33 +183,57 @@ function PlayScreen({ categoryId, totalQuestions, onFinish, onGoHome, onRestart 
                     }}>{currentQ.text}</h2>
                 </div>
 
-                {feedback && (
-                    <div className={`feedback-banner ${feedback.isCorrect ? 'feedback-correct' : 'feedback-wrong'}`}>
-                        {feedback.isCorrect
-                            ? <span>✅ 答對了！</span>
-                            : <span>❌ 答錯了！正確答案是 <strong>{feedback.correctAnswer.toLocaleString()}</strong></span>
-                        }
+                <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', position: 'relative', marginBottom: '30px' }}>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                        <input
+                            ref={inputRef}
+                            type="number"
+                            value={feedback ? (feedback.isCorrect ? userInput : feedback.correctAnswer) : userInput}
+                            onChange={(e) => setUserInput(e.target.value)}
+                            disabled={!!feedback}
+                            style={{
+                                width: '100%',
+                                padding: '20px',
+                                paddingLeft: feedback ? '50px' : '20px',
+                                fontSize: '2rem',
+                                borderRadius: '20px',
+                                border: `3px solid ${feedback ? (feedback.isCorrect ? '#00b894' : '#e17055') : '#a18cd1'}`,
+                                textAlign: 'center',
+                                backgroundColor: feedback 
+                                    ? (feedback.isCorrect ? 'rgba(0, 184, 148, 0.1)' : 'rgba(225, 112, 85, 0.1)') 
+                                    : 'white',
+                                transition: 'all 0.2s ease',
+                                boxSizing: 'border-box'
+                            }}
+                            placeholder="輸入答案"
+                        />
+                        {feedback && (
+                            <span style={{
+                                position: 'absolute',
+                                left: '15px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                fontSize: '1.8rem',
+                                pointerEvents: 'none'
+                            }}>
+                                {feedback.isCorrect ? '✅' : '❌'}
+                            </span>
+                        )}
+                        {feedback && !feedback.isCorrect && (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '-28px',
+                                left: '0',
+                                right: '0',
+                                textAlign: 'center',
+                                fontSize: '1rem',
+                                color: '#e17055',
+                                fontWeight: 'bold'
+                            }}>
+                                你的答案：{userInput}
+                            </div>
+                        )}
                     </div>
-                )}
-
-                <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
-                    <input
-                        ref={inputRef}
-                        type="number"
-                        value={userInput}
-                        onChange={(e) => setUserInput(e.target.value)}
-                        disabled={!!feedback}
-                        style={{
-                            flex: 1,
-                            padding: '20px',
-                            fontSize: '2rem',
-                            borderRadius: '20px',
-                            border: `2px solid ${feedback ? (feedback.isCorrect ? '#00b894' : '#e17055') : '#a18cd1'}`,
-                            textAlign: 'center',
-                            opacity: feedback ? 0.6 : 1
-                        }}
-                        placeholder="輸入答案"
-                    />
                     <button type="submit" className="btn" disabled={!!feedback} style={{ padding: '20px 30px', fontSize: '2rem', opacity: feedback ? 0.6 : 1 }}>送出</button>
                 </form>
             </div>
