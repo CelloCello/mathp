@@ -33,7 +33,7 @@ function App() {
             <main className="app-content">
                 {gameState === 'MENU' && <MenuScreen onSelectCategory={startSettings} />}
                 {gameState === 'SETTINGS' && <SettingsScreen onStart={startPlay} onBack={() => setGameState('MENU')} />}
-                {gameState === 'PLAYING' && <PlayScreen categoryId={config.categoryId} totalQuestions={config.questions} onFinish={finishPlay} />}
+                {gameState === 'PLAYING' && <PlayScreen categoryId={config.categoryId} totalQuestions={config.questions} onFinish={finishPlay} onGoHome={() => setGameState('MENU')} onRestart={() => setGameState('SETTINGS')} />}
                 {gameState === 'SUMMARY' && <SummaryScreen result={result} onRestart={() => setGameState('MENU')} />}
             </main>
         </div>
