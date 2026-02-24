@@ -98,7 +98,16 @@ function PlayScreen({ categoryId, totalQuestions, onFinish }) {
             </div>
 
             <div className="card" style={{ padding: '40px 20px', marginBottom: '30px' }}>
-                <h2 style={{ fontSize: '3rem', margin: 0 }}>{currentQ.text}</h2>
+                <h2 style={{
+                    fontSize: currentQ.text.length <= 10
+                        ? 'clamp(2rem, 8vw, 3rem)'
+                        : currentQ.text.length <= 18
+                            ? 'clamp(1.6rem, 6vw, 2.2rem)'
+                            : 'clamp(1.3rem, 4.5vw, 1.8rem)',
+                    margin: 0,
+                    lineHeight: 1.4,
+                    wordBreak: 'keep-all'
+                }}>{currentQ.text}</h2>
             </div>
 
             {feedback && (
