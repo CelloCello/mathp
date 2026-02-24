@@ -7,7 +7,9 @@ function PlayScreen({ categoryId, totalQuestions, onFinish }) {
     const [currentIdx, setCurrentIdx] = useState(0);
     const [questions, setQuestions] = useState([]);
     const [userInput, setUserInput] = useState('');
-    const [stats, setStats] = useState({ correct: 0, wrong: 0, startTime: Date.now() });
+    const [stats, setStats] = useState({ correct: 0, wrong: 0, startTime: Date.now(), wrongList: [] });
+    // feedback: null | { isCorrect, correctAnswer }
+    const [feedback, setFeedback] = useState(null);
 
     const inputRef = useRef(null);
 
@@ -20,29 +22,16 @@ function PlayScreen({ categoryId, totalQuestions, onFinish }) {
         setQuestions(generated);
     }, []);
 
-    // Auto focus input
+    // Auto focus input when moving to next question (not during feedback)
     useEffect(() => {
-        if (inputRef.current) {
+        if (!feedback && inputRef.current) {
             inputRef.current.focus();
         }
-    }, [currentIdx, questions]);
+    }, [currentIdx, questions, feedback]);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!userInput) return;
-
-        const currentQ = questions[currentIdx];
-        const isCorrect = currentQ.answers.includes(Number(userInput));
-
-        const newStats = {
-            ...stats,
-            correct: stats.correct + (isCorrect ? 1 : 0),
-            wrong: stats.wrong + (isCorrect ? 0 : 1)
-        };
-
-        setStats(newStats);
+    const advance = (newStats) => {
+        setFeedback(null);
         setUserInput('');
-
         if (currentIdx + 1 < totalQuestions) {
             setCurrentIdx(currentIdx + 1);
         } else {
@@ -50,10 +39,40 @@ function PlayScreen({ categoryId, totalQuestions, onFinish }) {
             onFinish({
                 ...newStats,
                 endTime,
-                timeSpentMs: endTime - stats.startTime,
+                timeSpentMs: endTime - newStats.startTime,
                 total: totalQuestions
             });
         }
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!userInput || feedback) return;
+
+        const currentQ = questions[currentIdx];
+        const isCorrect = currentQ.answers.includes(Number(userInput));
+
+        const newWrongList = isCorrect
+            ? stats.wrongList
+            : [...stats.wrongList, {
+                text: currentQ.text,
+                userAnswer: Number(userInput),
+                correctAnswer: currentQ.answers[0]
+            }];
+
+        const newStats = {
+            ...stats,
+            correct: stats.correct + (isCorrect ? 1 : 0),
+            wrong: stats.wrong + (isCorrect ? 0 : 1),
+            wrongList: newWrongList
+        };
+
+        setStats(newStats);
+        setFeedback({ isCorrect, correctAnswer: currentQ.answers[0] });
+
+        // Show feedback then advance
+        const delay = isCorrect ? 1000 : 1800;
+        setTimeout(() => advance(newStats), delay);
     };
 
     if (questions.length === 0) return <div>準備中...</div>;
@@ -82,23 +101,34 @@ function PlayScreen({ categoryId, totalQuestions, onFinish }) {
                 <h2 style={{ fontSize: '3rem', margin: 0 }}>{currentQ.text}</h2>
             </div>
 
+            {feedback && (
+                <div className={`feedback-banner ${feedback.isCorrect ? 'feedback-correct' : 'feedback-wrong'}`}>
+                    {feedback.isCorrect
+                        ? <span>✅ 答對了！</span>
+                        : <span>❌ 答錯了！正確答案是 <strong>{feedback.correctAnswer.toLocaleString()}</strong></span>
+                    }
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
                 <input
                     ref={inputRef}
                     type="number"
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
+                    disabled={!!feedback}
                     style={{
                         flex: 1,
                         padding: '20px',
                         fontSize: '2rem',
                         borderRadius: '20px',
-                        border: '2px solid #a18cd1',
-                        textAlign: 'center'
+                        border: `2px solid ${feedback ? (feedback.isCorrect ? '#00b894' : '#e17055') : '#a18cd1'}`,
+                        textAlign: 'center',
+                        opacity: feedback ? 0.6 : 1
                     }}
                     placeholder="輸入答案"
                 />
-                <button type="submit" className="btn" style={{ padding: '20px 30px', fontSize: '2rem' }}>送出</button>
+                <button type="submit" className="btn" disabled={!!feedback} style={{ padding: '20px 30px', fontSize: '2rem', opacity: feedback ? 0.6 : 1 }}>送出</button>
             </form>
         </div>
     );
