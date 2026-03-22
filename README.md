@@ -1,67 +1,165 @@
 # Math Practice Platform (MathP) 🐘
 
-一個為小學生設計的數學練習平台，擁有可愛、清楚的介面，支援手機與平板的響應式設計 (RWD)。平台特色在於提供各種數學知識分類（如加法、減法、乘法等），並且開發上非常方便擴充其他數學題型！
+一個為小學生設計的數學練習平台，現在採用 `分類 → 單元 → 題數 → 作答 → 結果` 的固定流程，支援數字輸入、分數輸入與選擇題三種作答模式。題庫已內建基礎加減法、九九乘法、概數，以及四個分數示範單元。
 
-## 🌟 核心功能 (Features)
-- 🎨 **可愛設計 & RWD**：使用活潑的顏色、圓滑的按鈕與大字體，在手機或電腦上皆能舒適閱讀。
-- 🎲 **隨機出題**：根據設定的邏輯動態隨機產生題目，每次挑戰都不同。
-- ⏱️ **自動計算成績與時間**：測驗結束後會顯示正確率、答對題數以及總耗時，並給予對應的鼓勵。
-- 🔧 **高擴充性**：透過簡單的配置檔，即可輕鬆新增像是「分數」、「小數」等全新挑戰分類。
-- 🚀 **靜態部署**：本專案為 Single Page Application (SPA)，建置後全為靜態檔案，可直接部署於 GitHub Pages 上。
+## 核心功能
 
-## 🛠️ 技術棧 (Tech Stack)
-- **前端框架**: [React 18](https://reactjs.org/)
-- **建置工具**: [Vite](https://vitejs.dev/) - 極速的開發體驗與建置。
-- **樣式 (Styling)**: Vanilla CSS (純 CSS) - 透過 CSS Variables 定義了全局可愛主題。
-- **字體**: Google Fonts (Nunito & Noto Sans TC)
+- `category → unit` 雙層題庫結構，讓同一分類下可以有多個獨立維護的單元
+- `number`、`fraction`、`choice` 三種題型介面與評分流程
+- `evaluate(rawInput)` 題目契約，評分規則由題目自身定義，畫面只負責顯示與流程控制
+- 分數輸入支援整數 `n`、分數 `a/b`、帶分數 `w a/b`
+- 概數單元只會出 `百位 / 千位 / 萬位` 與三種取概數方法的組合
 
-## 🚀 如何開始 (Getting Started)
+## 技術棧
 
-### 1. 安裝依賴 (Install Dependencies)
-請先確保你的電腦有安裝 [Node.js](https://nodejs.org/)。接著在專案根目錄下執行：
+- React 18
+- Vite 5
+- Vanilla CSS
+- Node.js 內建 test runner (`node --test`)
+
+## 開發指令
+
 ```bash
 npm install
-```
-
-### 2. 啟動開發伺服器 (Start Development Server)
-```bash
 npm run dev
-```
-執行後，可以在瀏覽器中開啟終端機提示的網址 (通常是 `http://localhost:5173/`) 來預覽與開發。
-
-### 3. 建置為靜態檔案 (Build for Production)
-若要將專案打包發布（例如放到 GitHub Pages 或任何靜態伺服器）：
-```bash
+npm test
 npm run build
 ```
-產生的檔案會放在 `dist` 資料夾中。你只要將 `dist` 內的檔案丟到靜態網頁伺服器即可運作！
 
-*(註：本專案在 `vite.config.js` 已經設定 `base: './'`，可直接使用相對路徑來載入資源，非常適合發布在各類子目錄中)*
+## 題庫結構
 
-## 🧩 如何擴充新題型 (How to Add New Categories)
+題庫定義集中在 [src/game/categories.js](/Users/sero/dev/sero/mathp/src/game/categories.js)。
 
-要新增不同的數學分類，只需編輯 `src/game/categories.js` 檔案即可。
-在 `categories` 陣列中新增一個物件：
+每個 category 都必須包含 `units[]`，每個 unit 都自己負責 `generateQuestion()`：
 
-```javascript
+```js
 {
-  id: 'division_basic',      // 分類唯一 ID
-  name: '基礎除法',            // 顯示名稱
-  description: '能整除的除法',   // 簡單描述
-  icon: '🍰',                // 可愛圖示
-  color: '#a18cd1',          // 卡片背景顏色
-  // 定義出題邏輯
-  generateQuestion: () => {
-    const b = Math.floor(Math.random() * 9) + 1;
-    const answer = Math.floor(Math.random() * 9) + 1;
-    const a = b * answer; // 確保能整除
-    
-    return {
-      text: `${a} ÷ ${b} = ?`, // 顯示在畫面的題目
-      answers: [answer],       // 支援多個正確答案的陣列格式
-      type: 'number'
-    };
-  }
+  id: 'fractions',
+  name: '分數',
+  description: '真分數、假分數、帶分數與同分母加減',
+  icon: '🥧',
+  color: '#f6b93b',
+  units: [
+    {
+      id: 'proper_fraction',
+      name: '真分數',
+      description: '從選項中找出分子小於分母的分數',
+      generateQuestion: () => createChoiceQuestion(...)
+    }
+  ]
 }
 ```
-儲存後，首頁就會自動多出一個新分類，完全不需要修改 UI 程式碼！
+
+可用的查找 helper：
+
+- `getCategoryById(categoryId)`
+- `getUnitById(categoryId, unitId)`
+- `createQuestionSet(categoryId, unitId, totalQuestions)` in [src/game/session.js](/Users/sero/dev/sero/mathp/src/game/session.js)
+
+## Question Contract
+
+每一題都必須回傳統一結構：
+
+```js
+{
+  text: '1/4 + 1/4 = ?',
+  inputMode: 'fraction', // 'number' | 'fraction' | 'choice'
+  placeholder: '例如 3/4',
+  options: [{ value: '1/2', label: '1/2' }], // only for choice
+  evaluate: (rawInput) => ({
+    isCorrect: true,
+    userAnswerLabel: '2/4',
+    correctAnswerLabel: '1/2',
+    validationError: null,
+    note: null
+  })
+}
+```
+
+`evaluate(rawInput)` 的規則：
+
+- `validationError` 不為 `null` 時，畫面不送出、不前進、不計分
+- `userAnswerLabel` / `correctAnswerLabel` 必須直接可顯示在結果頁與錯題回顧
+- 若題目有格式要求，可以用 `note` 補充，例如「這題要用帶分數作答」
+
+共用 factory 位於 [src/game/questionFactories.js](/Users/sero/dev/sero/mathp/src/game/questionFactories.js)：
+
+- `createNumberQuestion(...)`
+- `createChoiceQuestion(...)`
+- `createFractionQuestion(...)`
+
+## 分數規則
+
+分數工具位於 [src/game/fractionUtils.js](/Users/sero/dev/sero/mathp/src/game/fractionUtils.js)。
+
+目前支援：
+
+- 解析 `n`、`a/b`、`w a/b`
+- 分母不可為 `0`
+- 帶分數的小分數部分必須是真分數
+- 約分正規化與等值判定
+- 依單元需求要求特定格式，例如 `帶分數` 轉換題要求輸入帶分數時，等值假分數仍算錯
+- `分數加減` 目前會混出同分母的 `分數±分數`、`帶分數±分數`、`分數±帶分數`、`帶分數±帶分數`
+- `分數加減` 的答案格式依結果決定：大於 1 的非整數要用帶分數、小於 1 用分數、整數結果用整數
+
+## 新增 Category / Unit 的方式
+
+### 1. 新增一個 category
+
+若是全新分類，直接在 [src/game/categories.js](/Users/sero/dev/sero/mathp/src/game/categories.js) 新增 category 物件，並提供至少一個 unit。
+
+### 2. 在既有 category 下新增 unit
+
+最常見的擴充方式是為既有 category 增加一個 unit：
+
+```js
+{
+  id: 'multiplication_table',
+  name: '九九乘法',
+  description: '熟悉 1 到 9 的乘法表',
+  icon: '🚀',
+  color: '#fccb90',
+  units: [
+    existingUnit,
+    {
+      id: 'word_problems',
+      name: '乘法應用題',
+      description: '用情境題練習乘法',
+      generateQuestion: () => createNumberQuestion({
+        text: '3 盒每盒 4 顆，一共有幾顆？',
+        answer: 12
+      })
+    }
+  ]
+}
+```
+
+### 3. 若需要新題型
+
+優先遵守既有 question contract。只有在 `number / fraction / choice` 不足時，才擴充新的 `inputMode` 與畫面渲染邏輯。這時至少要同步修改：
+
+- [src/components/PlayScreen.jsx](/Users/sero/dev/sero/mathp/src/components/PlayScreen.jsx)
+- [src/components/SummaryScreen.jsx](/Users/sero/dev/sero/mathp/src/components/SummaryScreen.jsx)
+- 對應題目 factory / 工具模組
+- 測試案例
+
+## 測試覆蓋
+
+目前測試位於 [src/game/categories.test.js](/Users/sero/dev/sero/mathp/src/game/categories.test.js)、[src/game/fractionUtils.test.js](/Users/sero/dev/sero/mathp/src/game/fractionUtils.test.js)、[src/game/session.test.js](/Users/sero/dev/sero/mathp/src/game/session.test.js)，覆蓋：
+
+- category / unit schema 與 helper 查找
+- 概數 generator 只出指定位數與方法
+- 分數解析、格式驗證、等值判定
+- 帶分數格式要求
+- category / unit 選擇後的出題流程 helper
+
+## 目前內建單元
+
+- 基礎加法 / `10 以內加法`
+- 基礎減法 / `10 以內減法`
+- 九九乘法 / `1 到 9 乘法表`
+- 概數 / `百位到萬位概數`
+- 分數 / `真分數`
+- 分數 / `假分數`
+- 分數 / `帶分數`
+- 分數 / `分數加減`
