@@ -1,94 +1,431 @@
-// src/game/categories.js
+import { gcd, createFractionValue, formatFractionValue } from './fractionUtils.js';
+import {
+    createChoiceQuestion,
+    createFractionQuestion,
+    createNumberQuestion
+} from './questionFactories.js';
 
-/**
- * Math category definitions.
- * Easily extendable by adding new objects to this array.
- */
+const ROUNDING_METHODS = [
+    { name: '四捨五入法', apply: (value, unit) => Math.round(value / unit) * unit },
+    { name: '無條件進入法', apply: (value, unit) => Math.ceil(value / unit) * unit },
+    { name: '無條件捨去法', apply: (value, unit) => Math.floor(value / unit) * unit }
+];
+
+const ROUNDING_PLACES = [
+    { name: '百位', unit: 100 },
+    { name: '千位', unit: 1000 },
+    { name: '萬位', unit: 10000 }
+];
+
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const pickRandom = (items) => items[randomInt(0, items.length - 1)];
+
+const shuffle = (items) => {
+    const next = [...items];
+
+    for (let index = next.length - 1; index > 0; index -= 1) {
+        const swapIndex = randomInt(0, index);
+        [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+    }
+
+    return next;
+};
+
+const createRawFractionOption = (numerator, denominator) => ({
+    value: `${numerator}/${denominator}`,
+    label: `${numerator}/${denominator}`
+});
+
+const createRandomProperFractionOption = () => {
+    const denominator = randomInt(2, 9);
+    const candidates = Array.from({ length: denominator - 1 }, (_, index) => index + 1);
+    const numerator = pickRandom(candidates);
+
+    return createRawFractionOption(numerator, denominator);
+};
+
+const createRandomImproperFractionOption = () => {
+    const denominator = randomInt(2, 9);
+    const numerator = randomInt(denominator + 1, denominator + 8);
+
+    return createRawFractionOption(numerator, denominator);
+};
+
+const createUniqueOptions = (correctOptionFactory, distractorFactory) => {
+    const options = [];
+    const usedLabels = new Set();
+
+    const pushUnique = (option) => {
+        if (usedLabels.has(option.label)) {
+            return false;
+        }
+
+        usedLabels.add(option.label);
+        options.push(option);
+        return true;
+    };
+
+    while (options.length === 0) {
+        pushUnique(correctOptionFactory());
+    }
+
+    while (options.length < 4) {
+        pushUnique(distractorFactory());
+    }
+
+    return {
+        correctOption: options[0],
+        options: shuffle(options)
+    };
+};
+
+const createReducedProperFractionValue = () => {
+    const denominator = randomInt(2, 9);
+    const numerators = Array.from({ length: denominator - 1 }, (_, index) => index + 1)
+        .filter((numerator) => gcd(numerator, denominator) === 1);
+    const numerator = pickRandom(numerators);
+
+    return createFractionValue(numerator, denominator);
+};
+
+const createFractionOperand = (numerator, denominator) => ({
+    kind: 'fraction',
+    totalNumerator: numerator,
+    denominator,
+    label: `${numerator}/${denominator}`,
+    value: createFractionValue(numerator, denominator)
+});
+
+const createMixedOperand = (whole, numerator, denominator) => {
+    const totalNumerator = whole * denominator + numerator;
+
+    return {
+        kind: 'mixed',
+        whole,
+        numerator,
+        totalNumerator,
+        denominator,
+        label: `${whole} ${numerator}/${denominator}`,
+        value: createFractionValue(totalNumerator, denominator)
+    };
+};
+
+const createProperFractionOperand = (denominator) =>
+    createFractionOperand(randomInt(1, denominator - 1), denominator);
+
+const createDistinctProperFractionOperands = (denominator) => {
+    const left = randomInt(1, denominator - 1);
+    const right = pickRandom(
+        Array.from({ length: denominator - 1 }, (_, index) => index + 1)
+            .filter((candidate) => candidate !== left)
+    );
+
+    return {
+        left: createFractionOperand(left, denominator),
+        right: createFractionOperand(right, denominator)
+    };
+};
+
+const createOrderedProperFractionOperands = (denominator) => {
+    const left = randomInt(2, denominator - 1);
+    const right = randomInt(1, left - 1);
+
+    return {
+        left: createFractionOperand(left, denominator),
+        right: createFractionOperand(right, denominator)
+    };
+};
+
+const createImproperFractionOperand = (denominator, minimumNumerator) => {
+    const start = Math.max(denominator + 1, minimumNumerator);
+    const end = denominator * 5 - 1;
+    const candidates = Array.from({ length: end - start + 1 }, (_, index) => start + index)
+        .filter((numerator) => numerator % denominator !== 0);
+
+    return createFractionOperand(pickRandom(candidates), denominator);
+};
+
+const createFractionAddSubQuestion = () => {
+    const operator = Math.random() < 0.5 ? '+' : '-';
+    const operandPattern = pickRandom([
+        'fraction-fraction',
+        'mixed-fraction',
+        'fraction-mixed',
+        'mixed-mixed'
+    ]);
+    const denominator = randomInt(3, 12);
+
+    let leftOperand;
+    let rightOperand;
+
+    if (operandPattern === 'fraction-fraction') {
+        const operands = operator === '+'
+            ? createDistinctProperFractionOperands(denominator)
+            : createOrderedProperFractionOperands(denominator);
+        leftOperand = operands.left;
+        rightOperand = operands.right;
+    }
+
+    if (operandPattern === 'mixed-fraction') {
+        leftOperand = createMixedOperand(randomInt(1, 3), randomInt(1, denominator - 1), denominator);
+        rightOperand = createProperFractionOperand(denominator);
+    }
+
+    if (operandPattern === 'fraction-mixed') {
+        rightOperand = createMixedOperand(randomInt(1, 3), randomInt(1, denominator - 1), denominator);
+        leftOperand = operator === '+'
+            ? createProperFractionOperand(denominator)
+            : createImproperFractionOperand(denominator, rightOperand.totalNumerator + 1);
+    }
+
+    if (operandPattern === 'mixed-mixed') {
+        if (operator === '+') {
+            leftOperand = createMixedOperand(randomInt(1, 3), randomInt(1, denominator - 1), denominator);
+            do {
+                rightOperand = createMixedOperand(randomInt(1, 3), randomInt(1, denominator - 1), denominator);
+            } while (rightOperand.totalNumerator === leftOperand.totalNumerator);
+        } else {
+            const leftWhole = randomInt(2, 4);
+            const rightWhole = randomInt(1, leftWhole - 1);
+            leftOperand = createMixedOperand(leftWhole, randomInt(1, denominator - 1), denominator);
+            rightOperand = createMixedOperand(rightWhole, randomInt(1, denominator - 1), denominator);
+
+            if (rightOperand.totalNumerator >= leftOperand.totalNumerator) {
+                rightOperand = createMixedOperand(1, randomInt(1, denominator - 1), denominator);
+            }
+        }
+    }
+
+    const answer = createFractionValue(
+        operator === '+'
+            ? leftOperand.totalNumerator + rightOperand.totalNumerator
+            : leftOperand.totalNumerator - rightOperand.totalNumerator,
+        denominator
+    );
+    const resultKind = answer.denominator === 1
+        ? 'integer'
+        : answer.numerator > answer.denominator
+            ? 'mixed'
+            : 'fraction';
+    const standardAnswerLabel = resultKind === 'mixed'
+        ? formatFractionValue(answer, { style: 'mixed' })
+        : formatFractionValue(answer);
+
+    return createFractionQuestion({
+        text: `${leftOperand.label} ${operator} ${rightOperand.label} = ?`,
+        answerValue: answer,
+        standardAnswerLabel,
+        requiredKind: resultKind,
+        placeholder: '例如 3/4、1 1/2 或 2',
+        meta: {
+            promptType: 'fraction-add-subtract',
+            operandPattern,
+            operator,
+            denominator,
+            leftKind: leftOperand.kind,
+            rightKind: rightOperand.kind,
+            leftTotalNumerator: leftOperand.totalNumerator,
+            rightTotalNumerator: rightOperand.totalNumerator,
+            resultKind,
+            resultNumerator: answer.numerator,
+            resultDenominator: answer.denominator
+        }
+    });
+};
+
+const createAdditionUnit = () => ({
+    id: 'within_10',
+    name: '10 以內加法',
+    description: '練習和不超過 10 的加法',
+    generateQuestion: () => {
+        const a = randomInt(1, 9);
+        const b = randomInt(1, 10 - a);
+
+        return createNumberQuestion({
+            text: `${a} + ${b} = ?`,
+            answer: a + b
+        });
+    }
+});
+
+const createSubtractionUnit = () => ({
+    id: 'within_10',
+    name: '10 以內減法',
+    description: '練習被減數不超過 10 的減法',
+    generateQuestion: () => {
+        const a = randomInt(1, 10);
+        const b = randomInt(0, a - 1);
+
+        return createNumberQuestion({
+            text: `${a} - ${b} = ?`,
+            answer: a - b
+        });
+    }
+});
+
+const createMultiplicationUnit = () => ({
+    id: 'times_table',
+    name: '1 到 9 乘法表',
+    description: '練習九九乘法',
+    generateQuestion: () => {
+        const a = randomInt(1, 9);
+        const b = randomInt(1, 9);
+
+        return createNumberQuestion({
+            text: `${a} × ${b} = ?`,
+            answer: a * b
+        });
+    }
+});
+
+const createApproximationUnit = () => ({
+    id: 'rounding',
+    name: '百位到萬位概數',
+    description: '百位、千位、萬位的四捨五入與進位捨去',
+    generateQuestion: () => {
+        const method = pickRandom(ROUNDING_METHODS);
+        const place = pickRandom(ROUNDING_PLACES);
+        const value = randomInt(place.unit + 1, 99999);
+        const answer = method.apply(value, place.unit);
+
+        return createNumberQuestion({
+            text: `${value.toLocaleString()} 以「${method.name}」取概數到${place.name} = ?`,
+            answer,
+            meta: {
+                methodName: method.name,
+                placeName: place.name
+            }
+        });
+    }
+});
+
+const createProperFractionUnit = () => ({
+    id: 'proper_fraction',
+    name: '真分數',
+    description: '從選項中找出分子小於分母的分數',
+    generateQuestion: () => {
+        const { correctOption, options } = createUniqueOptions(
+            createRandomProperFractionOption,
+            createRandomImproperFractionOption
+        );
+
+        return createChoiceQuestion({
+            text: '下面哪一個是真分數？',
+            options,
+            correctValue: correctOption.value
+        });
+    }
+});
+
+const createImproperFractionUnit = () => ({
+    id: 'improper_fraction',
+    name: '假分數',
+    description: '從選項中找出分子大於分母的分數',
+    generateQuestion: () => {
+        const { correctOption, options } = createUniqueOptions(
+            createRandomImproperFractionOption,
+            createRandomProperFractionOption
+        );
+
+        return createChoiceQuestion({
+            text: '下面哪一個是假分數？',
+            options,
+            correctValue: correctOption.value
+        });
+    }
+});
+
+const createMixedFractionUnit = () => ({
+    id: 'mixed_fraction',
+    name: '帶分數',
+    description: '在假分數與帶分數之間互相轉換',
+    generateQuestion: () => {
+        const value = createReducedProperFractionValue();
+        const whole = randomInt(1, 4);
+        const improperNumerator = whole * value.denominator + value.numerator;
+        const mixedLabel = `${whole} ${value.numerator}/${value.denominator}`;
+        const improperLabel = `${improperNumerator}/${value.denominator}`;
+
+        if (Math.random() < 0.5) {
+            return createFractionQuestion({
+                text: `把 ${improperLabel} 化成帶分數`,
+                answerValue: createFractionValue(improperNumerator, value.denominator),
+                standardAnswerLabel: mixedLabel,
+                requiredKind: 'mixed',
+                placeholder: '例如 1 1/2',
+                meta: { promptType: 'improper-to-mixed' }
+            });
+        }
+
+        return createFractionQuestion({
+            text: `把 ${mixedLabel} 化成假分數`,
+            answerValue: createFractionValue(improperNumerator, value.denominator),
+            standardAnswerLabel: improperLabel,
+            requiredKind: 'improper',
+            placeholder: '例如 7/4',
+            meta: { promptType: 'mixed-to-improper' }
+        });
+    }
+});
+
+const createFractionAddSubUnit = () => ({
+    id: 'fraction_add_subtract',
+    name: '分數加減',
+    description: '同分母分數與帶分數的加減法',
+    generateQuestion: () => createFractionAddSubQuestion()
+});
+
 export const categories = [
     {
         id: 'addition_basic',
         name: '基礎加法',
-        description: '10以內的加法',
+        description: '從簡單加法開始暖身',
         icon: '🍎',
         color: '#ff9a9e',
-        generateQuestion: () => {
-            const a = Math.floor(Math.random() * 9) + 1; // 1 to 9
-            const b = Math.floor(Math.random() * (10 - a)) + 1; // Ensures sum <= 10
-            return {
-                text: `${a} + ${b} = ?`,
-                answers: [a + b], // Array to support multiple valid answers/formats later if needed
-                type: 'number'
-            };
-        }
+        units: [createAdditionUnit()]
     },
     {
         id: 'subtraction_basic',
         name: '基礎減法',
-        description: '10以內的減法',
+        description: '一步一步練習減法',
         icon: '🐢',
         color: '#84fab0',
-        generateQuestion: () => {
-            const a = Math.floor(Math.random() * 10) + 1; // 1 to 10
-            const b = Math.floor(Math.random() * a); // 0 to a-1 (ensures positive result)
-            return {
-                text: `${a} - ${b} = ?`,
-                answers: [a - b],
-                type: 'number'
-            };
-        }
+        units: [createSubtractionUnit()]
     },
     {
         id: 'multiplication_table',
         name: '九九乘法',
-        description: '1到9的乘法表',
+        description: '熟悉 1 到 9 的乘法表',
         icon: '🚀',
         color: '#fccb90',
-        generateQuestion: () => {
-            const a = Math.floor(Math.random() * 9) + 1;
-            const b = Math.floor(Math.random() * 9) + 1;
-            return {
-                text: `${a} × ${b} = ?`,
-                answers: [a * b],
-                type: 'number'
-            };
-        }
+        units: [createMultiplicationUnit()]
     },
     {
         id: 'approximation',
         name: '概數',
-        description: '四捨五入、無條件進入/捨去',
+        description: '四捨五入、無條件進入與無條件捨去',
         icon: '🎯',
         color: '#74b9ff',
-        generateQuestion: () => {
-            const methods = [
-                { name: '四捨五入法', fn: (n, unit) => Math.round(n / unit) * unit },
-                { name: '無條件進入法', fn: (n, unit) => Math.ceil(n / unit) * unit },
-                { name: '無條件捨去法', fn: (n, unit) => Math.floor(n / unit) * unit }
-            ];
-            const places = [
-                { name: '十位', unit: 10 },
-                { name: '百位', unit: 100 },
-                { name: '千位', unit: 1000 },
-                { name: '萬位', unit: 10000 }
-            ];
-
-            const method = methods[Math.floor(Math.random() * methods.length)];
-            const place = places[Math.floor(Math.random() * places.length)];
-
-            // Ensure the number is larger than the unit so the question is meaningful
-            const minNum = place.unit + 1;
-            const maxNum = 99999;
-            const num = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-
-            const answer = method.fn(num, place.unit);
-
-            return {
-                text: `${num.toLocaleString()} 以「${method.name}」取概數到${place.name} = ?`,
-                answers: [answer],
-                type: 'number'
-            };
-        }
+        units: [createApproximationUnit()]
+    },
+    {
+        id: 'fractions',
+        name: '分數',
+        description: '真分數、假分數、帶分數與同分母加減',
+        icon: '🥧',
+        color: '#f6b93b',
+        units: [
+            createProperFractionUnit(),
+            createImproperFractionUnit(),
+            createMixedFractionUnit(),
+            createFractionAddSubUnit()
+        ]
     }
 ];
 
-export const getCategoryById = (id) => categories.find(c => c.id === id);
+export const getCategoryById = (categoryId) =>
+    categories.find((category) => category.id === categoryId);
+
+export const getUnitById = (categoryId, unitId) =>
+    getCategoryById(categoryId)?.units.find((unit) => unit.id === unitId);
