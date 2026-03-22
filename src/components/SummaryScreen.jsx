@@ -1,4 +1,5 @@
 import React from 'react';
+import FractionText from './FractionText.jsx';
 
 function SummaryScreen({ result, onRestart }) {
     const {
@@ -41,10 +42,16 @@ function SummaryScreen({ result, onRestart }) {
                     <h3 style={{ textAlign: 'center', marginBottom: '15px', color: '#ff9a9e' }}>❌ 錯誤題目回顧</h3>
                     {wrongList.map((item, idx) => (
                         <div key={idx} className="wrong-review-item">
-                            <p className="wrong-review-question">{item.text}</p>
+                            <p className="wrong-review-question">
+                                <FractionText text={item.text} />
+                            </p>
                             <div className="wrong-review-answers">
-                                <span className="wrong-review-user">你的答案: {item.userAnswer}</span>
-                                <span className="wrong-review-correct">正確答案: {item.correctAnswer}</span>
+                                <span className="wrong-review-user">
+                                    你的答案: <FractionText text={item.userAnswer} />
+                                </span>
+                                <span className="wrong-review-correct">
+                                    正確答案: <FractionText text={item.correctAnswer} />
+                                </span>
                             </div>
                         </div>
                     ))}

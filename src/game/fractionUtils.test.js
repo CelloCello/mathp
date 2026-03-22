@@ -49,6 +49,10 @@ test('fraction question accepts equivalent answers but can still enforce answer 
     const equivalentAnswer = addQuestion.evaluate('2/4');
     const formatMismatch = mixedQuestion.evaluate('7/3');
 
+    assert.equal(addQuestion.fractionSpec.preferredEntryMode, 'fraction');
+    assert.equal(mixedQuestion.fractionSpec.requiredKind, 'mixed');
+    assert.equal(mixedQuestion.fractionSpec.example, '1 1/2');
+
     assert.equal(equivalentAnswer.isCorrect, true);
     assert.equal(equivalentAnswer.validationError, null);
 

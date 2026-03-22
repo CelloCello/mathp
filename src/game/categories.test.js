@@ -81,3 +81,43 @@ test('fraction add/subtract never uses identical operands or zero-result subtrac
         ['fraction-fraction', 'fraction-mixed', 'mixed-fraction', 'mixed-mixed'].sort()
     );
 });
+
+test('fraction units expose fractionSpec that matches the expected answer format', () => {
+    const mixedUnit = getUnitById('fractions', 'mixed_fraction');
+    const addSubUnit = getUnitById('fractions', 'fraction_add_subtract');
+    const mixedPromptTypes = new Set();
+    const addSubResultKinds = new Set();
+
+    for (let index = 0; index < 300; index += 1) {
+        const mixedQuestion = mixedUnit.generateQuestion();
+        mixedPromptTypes.add(mixedQuestion.meta.promptType);
+
+        if (mixedQuestion.meta.promptType === 'improper-to-mixed') {
+            assert.equal(mixedQuestion.fractionSpec.requiredKind, 'mixed');
+            assert.equal(mixedQuestion.fractionSpec.preferredEntryMode, 'mixed');
+        }
+
+        if (mixedQuestion.meta.promptType === 'mixed-to-improper') {
+            assert.equal(mixedQuestion.fractionSpec.requiredKind, 'improper');
+            assert.equal(mixedQuestion.fractionSpec.preferredEntryMode, 'fraction');
+        }
+
+        const addSubQuestion = addSubUnit.generateQuestion();
+        addSubResultKinds.add(addSubQuestion.meta.resultKind);
+
+        if (addSubQuestion.meta.resultKind === 'mixed') {
+            assert.equal(addSubQuestion.fractionSpec.preferredEntryMode, 'mixed');
+        }
+
+        if (addSubQuestion.meta.resultKind === 'fraction') {
+            assert.equal(addSubQuestion.fractionSpec.preferredEntryMode, 'fraction');
+        }
+
+        if (addSubQuestion.meta.resultKind === 'integer') {
+            assert.equal(addSubQuestion.fractionSpec.preferredEntryMode, 'integer');
+        }
+    }
+
+    assert.deepEqual([...mixedPromptTypes].sort(), ['improper-to-mixed', 'mixed-to-improper'].sort());
+    assert.deepEqual([...addSubResultKinds].sort(), ['fraction', 'integer', 'mixed'].sort());
+});

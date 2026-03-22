@@ -1,16 +1,12 @@
+import {
+    createFractionSpec,
+    REQUIRED_KIND_LABELS
+} from './fractionForm.js';
 import { compareFractionValues, parseFractionInput } from './fractionUtils.js';
 
 const INTEGER_PATTERN = /^-?\d+$/;
 
 const formatNumberLabel = (value) => Number(value).toLocaleString();
-
-const REQUIRED_KIND_LABELS = {
-    mixed: '這題要用帶分數作答。',
-    improper: '這題要用假分數作答。',
-    proper: '這題要用真分數作答。',
-    fraction: '這題要用分數作答。',
-    integer: '這題要用整數作答。'
-};
 
 const matchesRequiredKind = (parsed, requiredKind) => {
     if (requiredKind === 'any') {
@@ -102,6 +98,7 @@ export const createFractionQuestion = ({
     inputMode: 'fraction',
     placeholder,
     meta,
+    fractionSpec: createFractionSpec(requiredKind),
     evaluate: (rawInput) => {
         const parsed = parseFractionInput(rawInput);
 
