@@ -97,7 +97,10 @@ export const createFractionQuestion = ({
     text,
     inputMode: 'fraction',
     placeholder,
-    meta,
+    meta: {
+        renderKind: 'fraction-rich',
+        ...meta
+    },
     fractionSpec: createFractionSpec(requiredKind),
     evaluate: (rawInput) => {
         const parsed = parseFractionInput(rawInput);

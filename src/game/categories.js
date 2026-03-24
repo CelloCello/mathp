@@ -1,5 +1,12 @@
 import { gcd, createFractionValue, formatFractionValue } from './fractionUtils.js';
 import {
+    createBinaryNode,
+    createGroupNode,
+    createValueNode,
+    evaluateExpression,
+    expressionToText
+} from './expressionUtils.js';
+import {
     createChoiceQuestion,
     createFractionQuestion,
     createNumberQuestion
@@ -376,6 +383,188 @@ const createFractionAddSubUnit = () => ({
     generateQuestion: () => createFractionAddSubQuestion()
 });
 
+const createArithmeticQuestion = ({ expression, ruleType, usesImplicitMultiplication = false }) => {
+    const evaluation = evaluateExpression(expression);
+
+    return createNumberQuestion({
+        text: `${expressionToText(expression)} = ?`,
+        answer: evaluation.value,
+        placeholder: '輸入整數答案',
+        meta: {
+            promptType: 'integer-order-of-operations',
+            renderKind: 'expression',
+            ruleType,
+            mathModel: expression,
+            usesImplicitMultiplication,
+            answer: evaluation.value,
+            evaluationSteps: evaluation.steps
+        }
+    });
+};
+
+const valueNode = (value) => createValueNode(value);
+
+const createLeftToRightQuestion = () => {
+    const pattern = pickRandom(['add-subtract', 'multiply-divide', 'divide-multiply']);
+
+    if (pattern === 'add-subtract') {
+        const left = randomInt(6, 18);
+        const addend = randomInt(2, 9);
+        const subtrahend = randomInt(1, left + addend - 1);
+
+        return createArithmeticQuestion({
+            expression: createBinaryNode(
+                'subtract',
+                createBinaryNode('add', valueNode(left), valueNode(addend)),
+                valueNode(subtrahend)
+            ),
+            ruleType: 'left-to-right'
+        });
+    }
+
+    if (pattern === 'multiply-divide') {
+        const left = randomInt(2, 9);
+        const middle = randomInt(2, 9);
+        const divisorCandidates = Array.from(
+            { length: left * middle - 1 },
+            (_, index) => index + 2
+        ).filter((candidate) => (left * middle) % candidate === 0);
+        const right = pickRandom(divisorCandidates);
+
+        return createArithmeticQuestion({
+            expression: createBinaryNode(
+                'divide',
+                createBinaryNode('multiply', valueNode(left), valueNode(middle)),
+                valueNode(right)
+            ),
+            ruleType: 'left-to-right'
+        });
+    }
+
+    const divisor = randomInt(2, 9);
+    const quotient = randomInt(2, 9);
+    const multiplier = randomInt(2, 9);
+
+    return createArithmeticQuestion({
+        expression: createBinaryNode(
+            'multiply',
+            createBinaryNode('divide', valueNode(divisor * quotient), valueNode(divisor)),
+            valueNode(multiplier)
+        ),
+        ruleType: 'left-to-right'
+    });
+};
+
+const createPrecedenceQuestion = () => {
+    const pattern = pickRandom(['add-multiply', 'subtract-divide', 'multiply-add']);
+
+    if (pattern === 'add-multiply') {
+        return createArithmeticQuestion({
+            expression: createBinaryNode(
+                'add',
+                valueNode(randomInt(2, 12)),
+                createBinaryNode('multiply', valueNode(randomInt(2, 9)), valueNode(randomInt(2, 9)))
+            ),
+            ruleType: 'precedence'
+        });
+    }
+
+    if (pattern === 'subtract-divide') {
+        const divisor = randomInt(2, 9);
+        const quotient = randomInt(2, 9);
+        const minuend = randomInt(quotient + 3, quotient + 15);
+
+        return createArithmeticQuestion({
+            expression: createBinaryNode(
+                'subtract',
+                valueNode(minuend),
+                createBinaryNode('divide', valueNode(divisor * quotient), valueNode(divisor))
+            ),
+            ruleType: 'precedence'
+        });
+    }
+
+    return createArithmeticQuestion({
+        expression: createBinaryNode(
+            'add',
+            createBinaryNode('multiply', valueNode(randomInt(2, 9)), valueNode(randomInt(2, 9))),
+            valueNode(randomInt(2, 12))
+        ),
+        ruleType: 'precedence'
+    });
+};
+
+const createParenthesesQuestion = () => {
+    const factor = randomInt(2, 9);
+    const left = randomInt(1, 9);
+    const right = randomInt(1, 9);
+    const group = createGroupNode(
+        createBinaryNode('add', valueNode(left), valueNode(right)),
+        'paren'
+    );
+
+    return createArithmeticQuestion({
+        expression: createBinaryNode('multiply', valueNode(factor), group, { implicit: true }),
+        ruleType: 'parentheses',
+        usesImplicitMultiplication: true
+    });
+};
+
+const createNestedBracketsQuestion = () => {
+    const innerLeft = randomInt(3, 12);
+    const innerRight = randomInt(1, innerLeft - 1);
+    const innerGroup = createGroupNode(
+        createBinaryNode('subtract', valueNode(innerLeft), valueNode(innerRight)),
+        'paren'
+    );
+    const squareLeft = randomInt(innerLeft - innerRight + 1, innerLeft - innerRight + 8);
+    const squareGroup = createGroupNode(
+        createBinaryNode('subtract', valueNode(squareLeft), innerGroup),
+        'square'
+    );
+    const outerOffset = randomInt(2, 9);
+    const curlyGroup = createGroupNode(
+        createBinaryNode('add', valueNode(outerOffset), squareGroup),
+        'curly'
+    );
+    const factor = randomInt(2, 6);
+
+    return createArithmeticQuestion({
+        expression: createBinaryNode('multiply', valueNode(factor), curlyGroup),
+        ruleType: 'nested-brackets'
+    });
+};
+
+const createIntegerOrderOfOperationsQuestion = () => {
+    const ruleType = pickRandom([
+        'left-to-right',
+        'precedence',
+        'parentheses',
+        'nested-brackets'
+    ]);
+
+    if (ruleType === 'left-to-right') {
+        return createLeftToRightQuestion();
+    }
+
+    if (ruleType === 'precedence') {
+        return createPrecedenceQuestion();
+    }
+
+    if (ruleType === 'parentheses') {
+        return createParenthesesQuestion();
+    }
+
+    return createNestedBracketsQuestion();
+};
+
+const createArithmeticUnit = () => ({
+    id: 'integer_order_of_operations',
+    name: '基礎整數運算',
+    description: '整數四則、括號與運算順序',
+    generateQuestion: () => createIntegerOrderOfOperationsQuestion()
+});
+
 export const categories = [
     {
         id: 'addition_basic',
@@ -421,6 +610,14 @@ export const categories = [
             createMixedFractionUnit(),
             createFractionAddSubUnit()
         ]
+    },
+    {
+        id: 'arithmetic',
+        name: '四則運算',
+        description: '整數四則、先乘除後加減與括號規則',
+        icon: '🧮',
+        color: '#7fd1b9',
+        units: [createArithmeticUnit()]
     }
 ];
 

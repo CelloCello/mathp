@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getCategoryById, getUnitById } from '../game/categories.js';
 import FractionAnswerForm from './FractionAnswerForm.jsx';
-import FractionText from './FractionText.jsx';
+import MathContent from './MathContent.jsx';
 
 function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onRestart }) {
     const category = getCategoryById(categoryId);
@@ -78,6 +78,7 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                 ...stats.wrongList,
                 {
                     text: currentQuestion.text,
+                    questionMeta: currentQuestion.meta,
                     userAnswer: evaluation.userAnswerLabel,
                     correctAnswer: evaluation.correctAnswerLabel
                 }
@@ -179,7 +180,11 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                         lineHeight: 1.4,
                         wordBreak: 'keep-all'
                     }}>
-                        <FractionText text={currentQuestion.text} />
+                        <MathContent
+                            text={currentQuestion.text}
+                            renderKind={currentQuestion.meta?.renderKind}
+                            mathModel={currentQuestion.meta?.mathModel}
+                        />
                     </h2>
                 </div>
 
@@ -198,7 +203,7 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                                     disabled={!!feedback}
                                     onClick={() => submitAnswer(option.value)}
                                 >
-                                    <FractionText text={option.label} />
+                                    <MathContent text={option.label} />
                                 </button>
                             );
                         })}
@@ -244,13 +249,13 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                                 '答對了！'
                             ) : (
                                 <>
-                                    答錯了，正確答案是 <FractionText text={feedback.correctAnswerLabel} className="feedback-answer-text" />
+                                    答錯了，正確答案是 <MathContent text={feedback.correctAnswerLabel} className="feedback-answer-text" />
                                 </>
                             )}
                         </p>
                         {!feedback.isCorrect && (
                             <p style={{ fontSize: '1rem', marginTop: '8px' }}>
-                                你的答案：<FractionText text={feedback.userAnswerLabel} className="feedback-answer-text" />
+                                你的答案：<MathContent text={feedback.userAnswerLabel} className="feedback-answer-text" />
                                 {feedback.note ? `｜${feedback.note}` : ''}
                             </p>
                         )}

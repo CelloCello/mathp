@@ -214,6 +214,31 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.math-content {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.12em;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.math-content-inline {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.math-content-inline .katex {
+  font-size: 1em;
+  line-height: 1.2;
+  max-width: 100%;
+}
+
+.math-content-inline .katex-html {
+  max-width: 100%;
+}
+
 .choice-option:disabled {
   cursor: default;
 }

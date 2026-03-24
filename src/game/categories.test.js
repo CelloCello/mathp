@@ -4,14 +4,18 @@ import assert from 'node:assert/strict';
 import { categories, getCategoryById, getUnitById } from './categories.js';
 
 test('all categories expose units and helpers resolve category / unit ids', () => {
-    assert.ok(categories.length >= 5);
+    assert.ok(categories.length >= 6);
     assert.ok(categories.every((category) => Array.isArray(category.units) && category.units.length > 0));
 
     const fractions = getCategoryById('fractions');
     const mixedFractionUnit = getUnitById('fractions', 'mixed_fraction');
+    const arithmetic = getCategoryById('arithmetic');
+    const arithmeticUnit = getUnitById('arithmetic', 'integer_order_of_operations');
 
     assert.equal(fractions?.name, '分數');
     assert.equal(mixedFractionUnit?.name, '帶分數');
+    assert.equal(arithmetic?.name, '四則運算');
+    assert.equal(arithmeticUnit?.name, '基礎整數運算');
 });
 
 test('fraction category unit input modes match the plan requirements', () => {
@@ -120,4 +124,30 @@ test('fraction units expose fractionSpec that matches the expected answer format
 
     assert.deepEqual([...mixedPromptTypes].sort(), ['improper-to-mixed', 'mixed-to-improper'].sort());
     assert.deepEqual([...addSubResultKinds].sort(), ['fraction', 'integer', 'mixed'].sort());
+});
+
+test('arithmetic unit emits all order-of-operations rule types with integer-safe answers', () => {
+    const unit = getUnitById('arithmetic', 'integer_order_of_operations');
+    const seenRuleTypes = new Set();
+    let sawImplicitMultiplication = false;
+
+    for (let index = 0; index < 400; index += 1) {
+        const question = unit.generateQuestion();
+        const answer = question.meta.answer;
+
+        seenRuleTypes.add(question.meta.ruleType);
+        sawImplicitMultiplication = sawImplicitMultiplication || question.meta.usesImplicitMultiplication;
+
+        assert.equal(question.inputMode, 'number');
+        assert.equal(question.meta.renderKind, 'expression');
+        assert.ok(Number.isInteger(answer));
+        assert.ok(answer > 0);
+        assert.ok(question.meta.evaluationSteps.every((step) => Number.isInteger(step) && step > 0));
+    }
+
+    assert.deepEqual(
+        [...seenRuleTypes].sort(),
+        ['left-to-right', 'nested-brackets', 'parentheses', 'precedence'].sort()
+    );
+    assert.equal(sawImplicitMultiplication, true);
 });

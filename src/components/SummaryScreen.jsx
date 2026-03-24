@@ -1,5 +1,5 @@
 import React from 'react';
-import FractionText from './FractionText.jsx';
+import MathContent from './MathContent.jsx';
 
 function SummaryScreen({ result, onRestart }) {
     const {
@@ -43,14 +43,18 @@ function SummaryScreen({ result, onRestart }) {
                     {wrongList.map((item, idx) => (
                         <div key={idx} className="wrong-review-item">
                             <p className="wrong-review-question">
-                                <FractionText text={item.text} />
+                                <MathContent
+                                    text={item.text}
+                                    renderKind={item.questionMeta?.renderKind}
+                                    mathModel={item.questionMeta?.mathModel}
+                                />
                             </p>
                             <div className="wrong-review-answers">
                                 <span className="wrong-review-user">
-                                    你的答案: <FractionText text={item.userAnswer} />
+                                    你的答案: <MathContent text={item.userAnswer} />
                                 </span>
                                 <span className="wrong-review-correct">
-                                    正確答案: <FractionText text={item.correctAnswer} />
+                                    正確答案: <MathContent text={item.correctAnswer} />
                                 </span>
                             </div>
                         </div>
