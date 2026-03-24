@@ -13,17 +13,17 @@
 ## 技術棧
 
 - React 18
-- Vite 5
+- Vite 7
 - Vanilla CSS
-- Node.js 內建 test runner (`node --test`)
+- Vitest
 
 ## 開發指令
 
 ```bash
-npm install
-npm run dev
-npm test
-npm run build
+pnpm install
+pnpm dev
+pnpm test
+pnpm build
 ```
 
 ## 題庫結構
