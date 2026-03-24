@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getCategoryById, getUnitById } from '../game/categories.js';
+import FractionAnswerForm from './FractionAnswerForm.jsx';
+import MathContent from './MathContent.jsx';
 
 function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onRestart }) {
     const category = getCategoryById(categoryId);
@@ -76,6 +78,7 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                 ...stats.wrongList,
                 {
                     text: currentQuestion.text,
+                    questionMeta: currentQuestion.meta,
                     userAnswer: evaluation.userAnswerLabel,
                     correctAnswer: evaluation.correctAnswerLabel
                 }
@@ -176,7 +179,13 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                         margin: 0,
                         lineHeight: 1.4,
                         wordBreak: 'keep-all'
-                    }}>{currentQuestion.text}</h2>
+                    }}>
+                        <MathContent
+                            text={currentQuestion.text}
+                            renderKind={currentQuestion.meta?.renderKind}
+                            mathModel={currentQuestion.meta?.mathModel}
+                        />
+                    </h2>
                 </div>
 
                 {currentQuestion.inputMode === 'choice' ? (
@@ -194,11 +203,20 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                                     disabled={!!feedback}
                                     onClick={() => submitAnswer(option.value)}
                                 >
-                                    {option.label}
+                                    <MathContent text={option.label} />
                                 </button>
                             );
                         })}
                     </div>
+                ) : currentQuestion.inputMode === 'fraction' ? (
+                    <FractionAnswerForm
+                        key={currentIdx}
+                        fractionSpec={currentQuestion.fractionSpec}
+                        feedback={feedback}
+                        validationError={validationError}
+                        onValidationError={setValidationError}
+                        onSubmit={submitAnswer}
+                    />
                 ) : (
                     <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', position: 'relative', marginBottom: '10px' }}>
                         <div style={{ flex: 1, position: 'relative' }}>
@@ -220,16 +238,24 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                     </form>
                 )}
 
-                {validationError && (
+                {validationError && currentQuestion.inputMode !== 'fraction' && (
                     <p className="inline-error">{validationError}</p>
                 )}
 
                 {feedback && (
                     <div className={`feedback-banner ${feedback.isCorrect ? 'feedback-correct' : 'feedback-wrong'}`}>
-                        <p>{feedback.isCorrect ? '答對了！' : `答錯了，正確答案是 ${feedback.correctAnswerLabel}`}</p>
+                        <p>
+                            {feedback.isCorrect ? (
+                                '答對了！'
+                            ) : (
+                                <>
+                                    答錯了，正確答案是 <MathContent text={feedback.correctAnswerLabel} className="feedback-answer-text" />
+                                </>
+                            )}
+                        </p>
                         {!feedback.isCorrect && (
                             <p style={{ fontSize: '1rem', marginTop: '8px' }}>
-                                你的答案：{feedback.userAnswerLabel}
+                                你的答案：<MathContent text={feedback.userAnswerLabel} className="feedback-answer-text" />
                                 {feedback.note ? `｜${feedback.note}` : ''}
                             </p>
                         )}
