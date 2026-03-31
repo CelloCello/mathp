@@ -1,4 +1,9 @@
-import { gcd, createFractionValue, formatFractionValue } from './fractionUtils.js';
+import {
+    gcd,
+    createFractionValue,
+    formatFractionValue,
+    formatFractionValueWithOriginalDenominator
+} from './fractionUtils.js';
 import {
     createBinaryNode,
     createGroupNode,
@@ -151,6 +156,99 @@ const createImproperFractionOperand = (denominator, minimumNumerator) => {
         .filter((numerator) => numerator % denominator !== 0);
 
     return createFractionOperand(pickRandom(candidates), denominator);
+};
+
+const createProperFractionIntegerMultipleOperand = (denominator, multiplier) => {
+    const numerators = Array.from({ length: denominator - 1 }, (_, index) => index + 1)
+        .filter((numerator) =>
+            numerator * multiplier > denominator
+            && (numerator * multiplier) % denominator !== 0
+        );
+
+    if (numerators.length === 0) {
+        return null;
+    }
+
+    return createFractionOperand(pickRandom(numerators), denominator);
+};
+
+const createImproperFractionIntegerMultipleOperand = (denominator, multiplier) => {
+    const candidates = Array.from({ length: denominator * 4 - 1 }, (_, index) => denominator + 1 + index)
+        .filter((numerator) =>
+            numerator % denominator !== 0
+            && (numerator * multiplier) % denominator !== 0
+        );
+
+    if (candidates.length === 0) {
+        return null;
+    }
+
+    return createFractionOperand(pickRandom(candidates), denominator);
+};
+
+const createMixedFractionIntegerMultipleOperand = (denominator, multiplier) => {
+    const candidates = Array.from({ length: 3 }, (_, wholeOffset) => wholeOffset + 1)
+        .flatMap((whole) =>
+            Array.from({ length: denominator - 1 }, (_, numeratorOffset) => numeratorOffset + 1)
+                .filter((numerator) => ((whole * denominator) + numerator) * multiplier % denominator !== 0)
+                .map((numerator) => ({ whole, numerator }))
+        );
+
+    if (candidates.length === 0) {
+        return null;
+    }
+
+    const candidate = pickRandom(candidates);
+    return createMixedOperand(candidate.whole, candidate.numerator, denominator);
+};
+
+const createFractionIntegerMultipleOperand = (operandKind, denominator, multiplier) => {
+    if (operandKind === 'proper') {
+        return createProperFractionIntegerMultipleOperand(denominator, multiplier);
+    }
+
+    if (operandKind === 'improper') {
+        return createImproperFractionIntegerMultipleOperand(denominator, multiplier);
+    }
+
+    return createMixedFractionIntegerMultipleOperand(denominator, multiplier);
+};
+
+const createFractionIntegerMultipleQuestion = () => {
+    const operandKind = pickRandom(['proper', 'improper', 'mixed']);
+    let denominator;
+    let multiplier;
+    let leftOperand;
+
+    do {
+        denominator = randomInt(2, 9);
+        multiplier = randomInt(2, 5);
+        leftOperand = createFractionIntegerMultipleOperand(operandKind, denominator, multiplier);
+    } while (!leftOperand);
+
+    const answerTotalNumerator = leftOperand.totalNumerator * multiplier;
+    const answerValue = createFractionValue(answerTotalNumerator, denominator);
+    const displayAnswerLabel = formatFractionValueWithOriginalDenominator(
+        answerTotalNumerator,
+        denominator
+    );
+
+    return createFractionQuestion({
+        text: `${leftOperand.label} × ${multiplier} = ?`,
+        answerValue,
+        standardAnswerLabel: displayAnswerLabel,
+        requiredKind: 'mixed',
+        placeholder: '例如 1 1/2',
+        meta: {
+            promptType: 'fraction-integer-multiple',
+            operandKind,
+            multiplier,
+            denominator,
+            leftTotalNumerator: leftOperand.totalNumerator,
+            answerTotalNumerator,
+            displayAnswerLabel
+        }
+    });
 };
 
 const createFractionAddSubQuestion = () => {
@@ -383,6 +481,13 @@ const createFractionAddSubUnit = () => ({
     generateQuestion: () => createFractionAddSubQuestion()
 });
 
+const createFractionIntegerMultipleUnit = () => ({
+    id: 'fraction_integer_multiple',
+    name: '分數的整數倍',
+    description: '真分數、假分數與帶分數乘以整數',
+    generateQuestion: () => createFractionIntegerMultipleQuestion()
+});
+
 const createArithmeticQuestion = ({ expression, ruleType, usesImplicitMultiplication = false }) => {
     const evaluation = evaluateExpression(expression);
 
@@ -601,13 +706,14 @@ export const categories = [
     {
         id: 'fractions',
         name: '分數',
-        description: '真分數、假分數、帶分數與同分母加減',
+        description: '真分數、假分數、帶分數、整數倍與同分母加減',
         icon: '🥧',
         color: '#f6b93b',
         units: [
             createProperFractionUnit(),
             createImproperFractionUnit(),
             createMixedFractionUnit(),
+            createFractionIntegerMultipleUnit(),
             createFractionAddSubUnit()
         ]
     },

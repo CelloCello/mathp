@@ -68,6 +68,28 @@ export const formatFractionValue = (value, { style = 'auto' } = {}) => {
     return `${normalized.numerator}/${normalized.denominator}`;
 };
 
+export const formatFractionValueWithOriginalDenominator = (numerator, denominator) => {
+    if (!Number.isInteger(numerator) || !Number.isInteger(denominator) || denominator === 0) {
+        throw new Error('Fraction value must use a non-zero integer denominator.');
+    }
+
+    const sign = denominator < 0 ? -1 : 1;
+    const safeNumerator = numerator * sign;
+    const safeDenominator = Math.abs(denominator);
+    const whole = Math.trunc(safeNumerator / safeDenominator);
+    const remainder = Math.abs(safeNumerator % safeDenominator);
+
+    if (remainder === 0) {
+        return `${whole}`;
+    }
+
+    if (whole === 0) {
+        return `${remainder}/${safeDenominator}`;
+    }
+
+    return `${whole} ${remainder}/${safeDenominator}`;
+};
+
 const normalizeInputWhitespace = (rawInput) => String(rawInput ?? '').trim().replace(/\s+/g, ' ');
 
 export const parseFractionInput = (rawInput) => {

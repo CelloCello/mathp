@@ -22,11 +22,13 @@ test('fraction category unit input modes match the plan requirements', () => {
     const proper = getUnitById('fractions', 'proper_fraction');
     const improper = getUnitById('fractions', 'improper_fraction');
     const mixed = getUnitById('fractions', 'mixed_fraction');
+    const integerMultiple = getUnitById('fractions', 'fraction_integer_multiple');
     const addSub = getUnitById('fractions', 'fraction_add_subtract');
 
     assert.equal(proper.generateQuestion().inputMode, 'choice');
     assert.equal(improper.generateQuestion().inputMode, 'choice');
     assert.equal(mixed.generateQuestion().inputMode, 'fraction');
+    assert.equal(integerMultiple.generateQuestion().inputMode, 'fraction');
     assert.equal(addSub.generateQuestion().inputMode, 'fraction');
 });
 
@@ -88,8 +90,10 @@ test('fraction add/subtract never uses identical operands or zero-result subtrac
 
 test('fraction units expose fractionSpec that matches the expected answer format', () => {
     const mixedUnit = getUnitById('fractions', 'mixed_fraction');
+    const integerMultipleUnit = getUnitById('fractions', 'fraction_integer_multiple');
     const addSubUnit = getUnitById('fractions', 'fraction_add_subtract');
     const mixedPromptTypes = new Set();
+    const integerMultipleOperandKinds = new Set();
     const addSubResultKinds = new Set();
 
     for (let index = 0; index < 300; index += 1) {
@@ -105,6 +109,31 @@ test('fraction units expose fractionSpec that matches the expected answer format
             assert.equal(mixedQuestion.fractionSpec.requiredKind, 'improper');
             assert.equal(mixedQuestion.fractionSpec.preferredEntryMode, 'fraction');
         }
+
+        const integerMultipleQuestion = integerMultipleUnit.generateQuestion();
+        const {
+            promptType,
+            operandKind,
+            multiplier,
+            denominator,
+            leftTotalNumerator,
+            answerTotalNumerator,
+            displayAnswerLabel
+        } = integerMultipleQuestion.meta;
+        const displayAnswerEvaluation = integerMultipleQuestion.evaluate(displayAnswerLabel);
+
+        integerMultipleOperandKinds.add(operandKind);
+
+        assert.equal(promptType, 'fraction-integer-multiple');
+        assert.equal(integerMultipleQuestion.fractionSpec.requiredKind, 'mixed');
+        assert.equal(integerMultipleQuestion.fractionSpec.preferredEntryMode, 'mixed');
+        assert.ok(multiplier >= 2 && multiplier <= 5);
+        assert.ok(denominator >= 2 && denominator <= 9);
+        assert.ok(answerTotalNumerator > denominator);
+        assert.notEqual((leftTotalNumerator * multiplier) % denominator, 0);
+        assert.equal(answerTotalNumerator, leftTotalNumerator * multiplier);
+        assert.equal(displayAnswerEvaluation.isCorrect, true);
+        assert.equal(displayAnswerEvaluation.correctAnswerLabel, displayAnswerLabel);
 
         const addSubQuestion = addSubUnit.generateQuestion();
         addSubResultKinds.add(addSubQuestion.meta.resultKind);
@@ -123,6 +152,7 @@ test('fraction units expose fractionSpec that matches the expected answer format
     }
 
     assert.deepEqual([...mixedPromptTypes].sort(), ['improper-to-mixed', 'mixed-to-improper'].sort());
+    assert.deepEqual([...integerMultipleOperandKinds].sort(), ['improper', 'mixed', 'proper'].sort());
     assert.deepEqual([...addSubResultKinds].sort(), ['fraction', 'integer', 'mixed'].sort());
 });
 

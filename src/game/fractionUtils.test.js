@@ -5,6 +5,7 @@ import {
     compareFractionValues,
     createFractionValue,
     formatFractionValue,
+    formatFractionValueWithOriginalDenominator,
     parseFractionInput
 } from './fractionUtils.js';
 import { createFractionQuestion } from './questionFactories.js';
@@ -59,6 +60,27 @@ test('fraction question accepts equivalent answers but can still enforce answer 
     assert.equal(formatMismatch.isCorrect, false);
     assert.equal(formatMismatch.validationError, null);
     assert.equal(formatMismatch.note, '這題要用帶分數作答。');
+});
+
+test('fraction integer multiple answers can preserve display denominator while accepting equivalent mixed answers', () => {
+    const displayAnswerLabel = formatFractionValueWithOriginalDenominator(45, 6);
+    const question = createFractionQuestion({
+        text: '9/6 × 5 = ?',
+        answerValue: createFractionValue(45, 6),
+        standardAnswerLabel: displayAnswerLabel,
+        requiredKind: 'mixed'
+    });
+
+    const equivalentMixedAnswer = question.evaluate('7 1/2');
+    const improperAnswer = question.evaluate('45/6');
+
+    assert.equal(displayAnswerLabel, '7 3/6');
+    assert.equal(formatFractionValueWithOriginalDenominator(15, 9), '1 6/9');
+    assert.equal(equivalentMixedAnswer.isCorrect, true);
+    assert.equal(equivalentMixedAnswer.correctAnswerLabel, '7 3/6');
+    assert.equal(improperAnswer.isCorrect, false);
+    assert.equal(improperAnswer.validationError, null);
+    assert.equal(improperAnswer.note, '這題要用帶分數作答。');
 });
 
 test('compareFractionValues normalizes equivalent fractions', () => {
