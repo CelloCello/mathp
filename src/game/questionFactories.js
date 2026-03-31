@@ -8,33 +8,17 @@ const INTEGER_PATTERN = /^-?\d+$/;
 
 const formatNumberLabel = (value) => Number(value).toLocaleString();
 
-const matchesRequiredKind = (parsed, requiredKind) => {
-    if (requiredKind === 'any') {
-        return true;
-    }
-
-    if (requiredKind === 'mixed') {
-        return parsed.kind === 'mixed';
-    }
-
-    if (requiredKind === 'integer') {
-        return parsed.kind === 'integer';
-    }
-
-    if (requiredKind === 'fraction') {
-        return parsed.kind === 'fraction';
-    }
-
-    if (requiredKind === 'proper') {
-        return parsed.kind === 'fraction' && parsed.value.numerator < parsed.value.denominator;
-    }
-
-    if (requiredKind === 'improper') {
-        return parsed.kind === 'fraction' && parsed.value.numerator >= parsed.value.denominator;
-    }
-
-    return false;
+const REQUIRED_KIND_MATCHERS = {
+    any: () => true,
+    mixed: (parsed) => parsed.kind === 'mixed',
+    integer: (parsed) => parsed.kind === 'integer',
+    fraction: (parsed) => parsed.kind === 'fraction',
+    proper: (parsed) => parsed.kind === 'fraction' && parsed.value.numerator < parsed.value.denominator,
+    improper: (parsed) => parsed.kind === 'fraction' && parsed.value.numerator >= parsed.value.denominator
 };
+
+const matchesRequiredKind = (parsed, requiredKind) =>
+    (REQUIRED_KIND_MATCHERS[requiredKind] ?? (() => false))(parsed);
 
 export const createNumberQuestion = ({ text, answer, placeholder = '輸入答案', meta = {} }) => ({
     text,

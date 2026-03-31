@@ -1,6 +1,26 @@
 import React from 'react';
 import MathContent from './MathContent.jsx';
 
+const formatTimeSpent = (timeSpentMs) => {
+    const timeSecs = Math.round(timeSpentMs / 1000);
+    const mins = Math.floor(timeSecs / 60);
+    const secs = timeSecs % 60;
+
+    return `${mins > 0 ? `${mins}分 ` : ''}${secs}秒`;
+};
+
+const getSummaryReaction = (accuracy) => {
+    if (accuracy === 100) {
+        return { message: '太棒了！全對！', emoji: '🌟' };
+    }
+
+    if (accuracy >= 80) {
+        return { message: '做得很棒唷！', emoji: '👏' };
+    }
+
+    return { message: '繼續加油！', emoji: '💪' };
+};
+
 function SummaryScreen({ result, onRestart }) {
     const {
         categoryName,
@@ -13,15 +33,8 @@ function SummaryScreen({ result, onRestart }) {
     } = result;
 
     const accuracy = Math.round((correct / total) * 100);
-    const timeSecs = Math.round(timeSpentMs / 1000);
-    const mins = Math.floor(timeSecs / 60);
-    const secs = timeSecs % 60;
-
-    let message = '';
-    let emoji = '';
-    if (accuracy === 100) { message = '太棒了！全對！'; emoji = '🌟'; }
-    else if (accuracy >= 80) { message = '做得很棒唷！'; emoji = '👏'; }
-    else { message = '繼續加油！'; emoji = '💪'; }
+    const { message, emoji } = getSummaryReaction(accuracy);
+    const timeSpentLabel = formatTimeSpent(timeSpentMs);
 
     return (
         <div className="summary-screen animate-pop" style={{ textAlign: 'center' }}>
@@ -34,7 +47,7 @@ function SummaryScreen({ result, onRestart }) {
                 <p style={{ margin: '10px 0' }}>💡 正確率: <strong style={{ color: '#a18cd1' }}>{accuracy}%</strong></p>
                 <p style={{ margin: '10px 0' }}>✅ 答對: <strong style={{ color: '#84fab0' }}>{correct} 題</strong></p>
                 <p style={{ margin: '10px 0' }}>❌ 答錯: <strong style={{ color: '#e17055' }}>{wrong} 題</strong></p>
-                <p style={{ margin: '10px 0' }}>⏱ 使用時間: <strong>{mins > 0 ? `${mins}分 ` : ''}{secs}秒</strong></p>
+                <p style={{ margin: '10px 0' }}>⏱ 使用時間: <strong>{timeSpentLabel}</strong></p>
             </div>
 
             {wrongList.length > 0 && (
