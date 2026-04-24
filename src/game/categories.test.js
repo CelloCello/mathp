@@ -2,18 +2,31 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { categories, getCategoryById, getUnitById } from './categories.js';
+import {
+    createDecimalValue,
+    compareDecimalOrder,
+    formatDecimalValue,
+    multiplyDecimalByPowerOfTen,
+    divideDecimalByPowerOfTen,
+    addDecimalValues,
+    subtractDecimalValues
+} from './decimalUtils.js';
 
 test('all categories expose units and helpers resolve category / unit ids', () => {
-    assert.ok(categories.length >= 6);
+    assert.ok(categories.length >= 7);
     assert.ok(categories.every((category) => Array.isArray(category.units) && category.units.length > 0));
 
     const fractions = getCategoryById('fractions');
     const mixedFractionUnit = getUnitById('fractions', 'mixed_fraction');
+    const decimals = getCategoryById('decimals');
+    const decimalIntroUnit = getUnitById('decimals', 'decimal_introduction');
     const arithmetic = getCategoryById('arithmetic');
     const arithmeticUnit = getUnitById('arithmetic', 'integer_order_of_operations');
 
     assert.equal(fractions?.name, '分數');
     assert.equal(mixedFractionUnit?.name, '帶分數');
+    assert.equal(decimals?.name, '小數');
+    assert.equal(decimalIntroUnit?.name, '認識小數');
     assert.equal(arithmetic?.name, '四則運算');
     assert.equal(arithmeticUnit?.name, '基礎整數運算');
 });
@@ -180,4 +193,146 @@ test('arithmetic unit emits all order-of-operations rule types with integer-safe
         ['left-to-right', 'nested-brackets', 'parentheses', 'precedence'].sort()
     );
     assert.equal(sawImplicitMultiplication, true);
+});
+
+test('decimal category exposes the three expected units and input modes', () => {
+    const introduction = getUnitById('decimals', 'decimal_introduction');
+    const addSub = getUnitById('decimals', 'decimal_add_subtract');
+    const pointShift = getUnitById('decimals', 'decimal_point_shift');
+
+    assert.equal(introduction.generateQuestion().inputMode, 'fields');
+    assert.equal(addSub.generateQuestion().inputMode, 'decimal');
+    assert.equal(pointShift.generateQuestion().inputMode, 'decimal');
+});
+
+test('decimal introduction emits all prompt types with self-validating field answers', () => {
+    const unit = getUnitById('decimals', 'decimal_introduction');
+    const seenPromptTypes = new Set();
+
+    for (let index = 0; index < 500; index += 1) {
+        const question = unit.generateQuestion();
+        const { meta } = question;
+
+        seenPromptTypes.add(meta.promptType);
+
+        assert.equal(question.inputMode, 'fields');
+        assert.ok(meta.decimalUnits > 0);
+        assert.ok(meta.decimalScale >= 1 && meta.decimalScale <= 3);
+        assert.equal(formatDecimalValue(createDecimalValue(meta.decimalUnits, meta.decimalScale)), meta.decimalLabel);
+
+        const evaluation = question.evaluate(meta.correctInput);
+        assert.equal(evaluation.isCorrect, true);
+        assert.equal(evaluation.validationError, null);
+
+        if (meta.promptType === 'decimal-smallest-unit') {
+            assert.equal(meta.fractionNumerator, meta.decimalUnits);
+            assert.equal(meta.fractionDenominator, 10 ** meta.decimalScale);
+            assert.equal(meta.smallestUnitLabel, formatDecimalValue(createDecimalValue(1, meta.decimalScale)));
+            assert.deepEqual(
+                question.fields.map((field) => field.id),
+                ['count', 'numerator', 'denominator']
+            );
+            assert.equal(question.fields[0].label, `${meta.smallestUnitLabel} 的個數`);
+        }
+
+        if (meta.promptType === 'decimal-expanded-form') {
+            assert.ok(meta.terms.length > 0);
+            assert.ok(meta.terms.every((term) => term.digit > 0));
+            assert.ok(meta.terms.every((term) => term.placeValueLabel));
+            assert.deepEqual(
+                question.formulaPreview.parts,
+                meta.terms.map((term) => ({
+                    fieldId: term.fieldId,
+                    multiplierLabel: term.placeValueLabel
+                }))
+            );
+        }
+
+        if (meta.promptType === 'decimal-place-value') {
+            assert.ok(meta.decimalScale >= 2);
+            assert.equal(
+                meta.representedValueLabel,
+                formatDecimalValue(createDecimalValue(meta.digit, { '十分位': 1, '百分位': 2, '千分位': 3 }[meta.placeName]))
+            );
+        }
+    }
+
+    assert.deepEqual(
+        [...seenPromptTypes].sort(),
+        ['decimal-expanded-form', 'decimal-place-value', 'decimal-smallest-unit'].sort()
+    );
+});
+
+test('decimal add/subtract questions stay in range and never subtract below zero', () => {
+    const unit = getUnitById('decimals', 'decimal_add_subtract');
+
+    for (let index = 0; index < 400; index += 1) {
+        const question = unit.generateQuestion();
+        const {
+            operator,
+            leftUnits,
+            leftScale,
+            rightUnits,
+            rightScale,
+            answerUnits,
+            answerScale,
+            answerLabel
+        } = question.meta;
+        const left = createDecimalValue(leftUnits, leftScale);
+        const right = createDecimalValue(rightUnits, rightScale);
+        const expected = operator === '+'
+            ? addDecimalValues(left, right)
+            : subtractDecimalValues(left, right);
+
+        assert.equal(question.inputMode, 'decimal');
+        assert.ok(leftScale <= 3);
+        assert.ok(rightScale <= 3);
+        assert.ok(leftUnits <= 100 * (10 ** leftScale));
+        assert.ok(rightUnits <= 100 * (10 ** rightScale));
+        assert.equal(formatDecimalValue(expected), answerLabel);
+        assert.equal(answerUnits, expected.units);
+        assert.equal(answerScale, expected.scale);
+        assert.equal(question.evaluate(answerLabel.includes('.') ? `${answerLabel}0` : `${answerLabel}.0`).isCorrect, true);
+    }
+});
+
+test('decimal point shift questions use powers of ten and exact answers', () => {
+    const unit = getUnitById('decimals', 'decimal_point_shift');
+    const seenOperators = new Set();
+
+    for (let index = 0; index < 400; index += 1) {
+        const question = unit.generateQuestion();
+        const {
+            operator,
+            exponent,
+            multiplier,
+            valueUnits,
+            valueScale,
+            answerUnits,
+            answerScale,
+            answerLabel
+        } = question.meta;
+        const value = createDecimalValue(valueUnits, valueScale);
+        const expected = operator === '×'
+            ? multiplyDecimalByPowerOfTen(value, exponent)
+            : divideDecimalByPowerOfTen(value, exponent);
+
+        seenOperators.add(operator);
+
+        assert.equal(question.inputMode, 'decimal');
+        assert.ok(exponent >= 1 && exponent <= 4);
+        assert.equal(multiplier, 10 ** exponent);
+        assert.ok(multiplier <= 10000);
+        assert.ok(valueScale <= 3);
+        assert.ok(valueUnits <= 100 * (10 ** valueScale));
+        assert.equal(formatDecimalValue(expected), answerLabel);
+        assert.equal(answerUnits, expected.units);
+        assert.equal(answerScale, expected.scale);
+        if (operator === '×') {
+            assert.ok(compareDecimalOrder(expected, createDecimalValue(10000, 0)) <= 0);
+        }
+        assert.equal(question.evaluate(answerLabel).isCorrect, true);
+    }
+
+    assert.deepEqual([...seenOperators].sort(), ['×', '÷'].sort());
 });

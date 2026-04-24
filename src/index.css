@@ -484,6 +484,84 @@ body {
   justify-content: flex-end;
 }
 
+.field-answer-form {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.field-answer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 2px solid rgba(161, 140, 209, 0.14);
+}
+
+.field-answer-field {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+}
+
+.field-answer-label {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #6c6c6c;
+}
+
+.field-answer-input {
+  width: 100%;
+  padding: 16px 12px;
+  border: 3px solid rgba(161, 140, 209, 0.9);
+  border-radius: 20px;
+  background: #fff;
+  color: var(--color-text);
+  font-size: 1.55rem;
+  font-weight: 800;
+  text-align: center;
+  font-family: inherit;
+}
+
+.field-answer-input.is-correct {
+  border-color: #00b894;
+  background: rgba(0, 184, 148, 0.1);
+}
+
+.field-answer-input.is-wrong {
+  border-color: #e17055;
+  background: rgba(225, 112, 85, 0.1);
+}
+
+.field-formula-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(252, 203, 144, 0.22);
+  color: #8a5a12;
+  font-weight: 800;
+}
+
+.field-formula-label {
+  color: #b7791f;
+  font-size: 0.95rem;
+}
+
+.field-formula-text {
+  font-size: 1.25rem;
+}
+
+.field-answer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .feedback-answer-text {
   color: inherit;
 }
@@ -650,6 +728,14 @@ body {
   }
 
   .fraction-answer-actions .btn {
+    width: 100%;
+  }
+
+  .field-answer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-answer-actions .btn {
     width: 100%;
   }
 }

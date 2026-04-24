@@ -2,9 +2,15 @@ import {
     createFractionSpec,
     REQUIRED_KIND_LABELS
 } from './fractionForm.js';
+import {
+    compareDecimalValues,
+    formatDecimalValue,
+    parseDecimalInput
+} from './decimalUtils.js';
 import { compareFractionValues, parseFractionInput } from './fractionUtils.js';
 
 const INTEGER_PATTERN = /^-?\d+$/;
+const NON_NEGATIVE_INTEGER_PATTERN = /^\d+$/;
 
 const formatNumberLabel = (value) => Number(value).toLocaleString();
 
@@ -65,6 +71,116 @@ export const createChoiceQuestion = ({ text, options, correctValue, meta = {} })
             isCorrect: rawInput === correctValue,
             userAnswerLabel: selectedOption.label,
             correctAnswerLabel: correctOption.label,
+            validationError: null
+        };
+    }
+});
+
+const evaluateFieldAnswer = (field, rawValue) => {
+    const value = String(rawValue ?? '').trim();
+
+    if (!value) {
+        return { isValid: false, error: `請填寫「${field.label}」。` };
+    }
+
+    if (field.answerKind === 'integer') {
+        if (!NON_NEGATIVE_INTEGER_PATTERN.test(value)) {
+            return { isValid: false, error: `「${field.label}」請輸入整數。` };
+        }
+
+        return {
+            isValid: true,
+            isCorrect: Number(value) === field.expectedValue,
+            displayLabel: value
+        };
+    }
+
+    if (field.answerKind === 'decimal') {
+        const parsed = parseDecimalInput(value);
+
+        if (!parsed.isValid) {
+            return { isValid: false, error: `「${field.label}」${parsed.error}` };
+        }
+
+        return {
+            isValid: true,
+            isCorrect: compareDecimalValues(parsed.value, field.expectedValue),
+            displayLabel: parsed.displayLabel
+        };
+    }
+
+    return {
+        isValid: true,
+        isCorrect: value === field.expectedValue,
+        displayLabel: value
+    };
+};
+
+export const createDecimalQuestion = ({
+    text,
+    answerValue,
+    placeholder = '輸入小數或整數答案',
+    meta = {}
+}) => ({
+    text,
+    inputMode: 'decimal',
+    placeholder,
+    meta,
+    evaluate: (rawInput) => {
+        const parsed = parseDecimalInput(rawInput);
+
+        if (!parsed.isValid) {
+            return { isCorrect: false, validationError: parsed.error };
+        }
+
+        return {
+            isCorrect: compareDecimalValues(parsed.value, answerValue),
+            userAnswerLabel: parsed.displayLabel,
+            correctAnswerLabel: formatDecimalValue(answerValue),
+            validationError: null
+        };
+    }
+});
+
+export const createFieldQuestion = ({
+    text,
+    fields,
+    formulaPreview = null,
+    placeholder = '填入答案',
+    meta = {}
+}) => ({
+    text,
+    inputMode: 'fields',
+    placeholder,
+    fields,
+    formulaPreview,
+    meta,
+    evaluate: (rawInput) => {
+        const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
+        const evaluatedFields = [];
+
+        for (const field of fields) {
+            const evaluated = evaluateFieldAnswer(field, input[field.id]);
+
+            if (!evaluated.isValid) {
+                return { isCorrect: false, validationError: evaluated.error };
+            }
+
+            evaluatedFields.push({
+                field,
+                isCorrect: evaluated.isCorrect,
+                displayLabel: evaluated.displayLabel
+            });
+        }
+
+        return {
+            isCorrect: evaluatedFields.every((field) => field.isCorrect),
+            userAnswerLabel: evaluatedFields
+                .map(({ field, displayLabel }) => `${field.label}: ${displayLabel}`)
+                .join('、'),
+            correctAnswerLabel: fields
+                .map((field) => `${field.label}: ${field.displayValue}`)
+                .join('、'),
             validationError: null
         };
     }

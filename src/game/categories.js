@@ -1,4 +1,13 @@
 import {
+    addDecimalValues,
+    compareDecimalOrder,
+    createDecimalValue,
+    divideDecimalByPowerOfTen,
+    formatDecimalValue,
+    multiplyDecimalByPowerOfTen,
+    subtractDecimalValues
+} from './decimalUtils.js';
+import {
     gcd,
     createFractionValue,
     formatFractionValue,
@@ -13,6 +22,8 @@ import {
 } from './expressionUtils.js';
 import {
     createChoiceQuestion,
+    createDecimalQuestion,
+    createFieldQuestion,
     createFractionQuestion,
     createNumberQuestion
 } from './questionFactories.js';
@@ -27,6 +38,12 @@ const ROUNDING_PLACES = [
     { name: '百位', unit: 100 },
     { name: '千位', unit: 1000 },
     { name: '萬位', unit: 10000 }
+];
+
+const DECIMAL_PLACE_VALUES = [
+    { name: '十分位', unitLabel: '0.1', denominator: 10, scale: 1 },
+    { name: '百分位', unitLabel: '0.01', denominator: 100, scale: 2 },
+    { name: '千分位', unitLabel: '0.001', denominator: 1000, scale: 3 }
 ];
 
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -90,6 +107,156 @@ const createUniqueOptions = (correctOptionFactory, distractorFactory) => {
         correctOption: options[0],
         options: shuffle(options)
     };
+};
+
+const createRandomIntroDecimal = () => {
+    const scale = randomInt(1, 3);
+    const maxUnits = (10 ** scale) - 1;
+    const candidates = Array.from({ length: maxUnits }, (_, index) => index + 1)
+        .filter((candidate) => scale === 1 || candidate % 10 !== 0);
+
+    return createDecimalValue(pickRandom(candidates), scale);
+};
+
+const createRandomMultiDigitIntroDecimal = () => {
+    const scale = randomInt(2, 3);
+    const maxUnits = (10 ** scale) - 1;
+    const candidates = Array.from({ length: maxUnits }, (_, index) => index + 1)
+        .filter((candidate) => candidate % 10 !== 0);
+
+    return createDecimalValue(pickRandom(candidates), scale);
+};
+
+const createRandomDecimalUpTo100 = () => {
+    const scale = randomInt(0, 3);
+    const maxUnits = 100 * (10 ** scale);
+
+    return createDecimalValue(randomInt(0, maxUnits), scale);
+};
+
+const createDecimalField = ({ id, label, expectedValue }) => ({
+    id,
+    label,
+    answerKind: 'decimal',
+    expectedValue,
+    displayValue: formatDecimalValue(expectedValue),
+    inputMode: 'decimal'
+});
+
+const createIntegerField = ({ id, label, expectedValue }) => ({
+    id,
+    label,
+    answerKind: 'integer',
+    expectedValue,
+    displayValue: String(expectedValue),
+    inputMode: 'numeric'
+});
+
+const getDecimalDigits = (value) =>
+    String(value.units).padStart(value.scale, '0').split('').map(Number);
+
+const createSmallestDecimalUnitQuestion = () => {
+    const value = createRandomIntroDecimal();
+    const place = DECIMAL_PLACE_VALUES[value.scale - 1];
+    const valueLabel = formatDecimalValue(value);
+    return createFieldQuestion({
+        text: `${valueLabel} 是由多少個 ${place.unitLabel} 組成？換成分數是多少？`,
+        fields: [
+            createIntegerField({ id: 'count', label: `${place.unitLabel} 的個數`, expectedValue: value.units }),
+            createIntegerField({ id: 'numerator', label: '分子', expectedValue: value.units }),
+            createIntegerField({ id: 'denominator', label: '分母', expectedValue: place.denominator })
+        ],
+        meta: {
+            promptType: 'decimal-smallest-unit',
+            decimalUnits: value.units,
+            decimalScale: value.scale,
+            decimalLabel: valueLabel,
+            smallestUnitLabel: place.unitLabel,
+            fractionNumerator: value.units,
+            fractionDenominator: place.denominator,
+            correctInput: {
+                count: String(value.units),
+                numerator: String(value.units),
+                denominator: String(place.denominator)
+            }
+        }
+    });
+};
+
+const createDecimalExpandedFormQuestion = () => {
+    const value = createRandomIntroDecimal();
+    const valueLabel = formatDecimalValue(value);
+    const digits = getDecimalDigits(value);
+    const terms = digits
+        .map((digit, index) => ({
+            digit,
+            place: DECIMAL_PLACE_VALUES[index]
+        }))
+        .filter((term) => term.digit > 0);
+
+    return createFieldQuestion({
+        text: `${valueLabel} 可以拆成哪些小數？`,
+        fields: terms.map((term, index) =>
+            createIntegerField({
+                id: `digit${index}`,
+                label: `${term.place.unitLabel} 的個數`,
+                expectedValue: term.digit
+            })
+        ),
+        meta: {
+            promptType: 'decimal-expanded-form',
+            decimalUnits: value.units,
+            decimalScale: value.scale,
+            decimalLabel: valueLabel,
+            terms: terms.map((term, index) => ({
+                fieldId: `digit${index}`,
+                placeName: term.place.name,
+                placeValueLabel: term.place.unitLabel,
+                digit: term.digit
+            })),
+            correctInput: Object.fromEntries(
+                terms.map((term, index) => [`digit${index}`, String(term.digit)])
+            )
+        },
+        formulaPreview: {
+            parts: terms.map((term, index) => ({
+                fieldId: `digit${index}`,
+                multiplierLabel: term.place.unitLabel
+            }))
+        }
+    });
+};
+
+const createDecimalPlaceValueQuestion = () => {
+    const value = createRandomMultiDigitIntroDecimal();
+    const valueLabel = formatDecimalValue(value);
+    const digits = getDecimalDigits(value);
+    const placeIndex = randomInt(0, value.scale - 1);
+    const place = DECIMAL_PLACE_VALUES[placeIndex];
+    const digit = digits[placeIndex];
+    const representedValue = createDecimalValue(digit, place.scale);
+
+    return createFieldQuestion({
+        text: `${valueLabel} 的${place.name}數字是多少？代表多少？`,
+        fields: [
+            createIntegerField({ id: 'digit', label: '數字', expectedValue: digit }),
+            createDecimalField({ id: 'value', label: '代表的小數', expectedValue: representedValue })
+        ],
+        meta: {
+            promptType: 'decimal-place-value',
+            decimalUnits: value.units,
+            decimalScale: value.scale,
+            decimalLabel: valueLabel,
+            placeName: place.name,
+            placeValueLabel: place.unitLabel,
+            digit,
+            representedValueLabel: formatDecimalValue(representedValue),
+            correctInput: {
+                digit: String(digit),
+                value: formatDecimalValue(representedValue)
+            }
+        }
+    });
 };
 
 const createReducedProperFractionValue = () => {
@@ -488,6 +655,114 @@ const createFractionIntegerMultipleUnit = () => ({
     generateQuestion: () => createFractionIntegerMultipleQuestion()
 });
 
+const createDecimalIntroductionQuestion = () => {
+    const promptType = pickRandom([
+        'decimal-smallest-unit',
+        'decimal-expanded-form',
+        'decimal-place-value'
+    ]);
+
+    if (promptType === 'decimal-smallest-unit') {
+        return createSmallestDecimalUnitQuestion();
+    }
+
+    if (promptType === 'decimal-expanded-form') {
+        return createDecimalExpandedFormQuestion();
+    }
+
+    return createDecimalPlaceValueQuestion();
+};
+
+const createDecimalIntroductionUnit = () => ({
+    id: 'decimal_introduction',
+    name: '認識小數',
+    description: '練習小數的位值、組成與分數表示',
+    generateQuestion: () => createDecimalIntroductionQuestion()
+});
+
+const createDecimalAddSubQuestion = () => {
+    const operator = Math.random() < 0.5 ? '+' : '-';
+    let leftValue = createRandomDecimalUpTo100();
+    let rightValue = createRandomDecimalUpTo100();
+
+    if (operator === '-' && compareDecimalOrder(leftValue, rightValue) < 0) {
+        [leftValue, rightValue] = [rightValue, leftValue];
+    }
+
+    const answerValue = operator === '+'
+        ? addDecimalValues(leftValue, rightValue)
+        : subtractDecimalValues(leftValue, rightValue);
+
+    return createDecimalQuestion({
+        text: `${formatDecimalValue(leftValue)} ${operator} ${formatDecimalValue(rightValue)} = ?`,
+        answerValue,
+        meta: {
+            promptType: 'decimal-add-subtract',
+            operator,
+            leftUnits: leftValue.units,
+            leftScale: leftValue.scale,
+            leftLabel: formatDecimalValue(leftValue),
+            rightUnits: rightValue.units,
+            rightScale: rightValue.scale,
+            rightLabel: formatDecimalValue(rightValue),
+            answerUnits: answerValue.units,
+            answerScale: answerValue.scale,
+            answerLabel: formatDecimalValue(answerValue)
+        }
+    });
+};
+
+const createDecimalAddSubUnit = () => ({
+    id: 'decimal_add_subtract',
+    name: '小數加減',
+    description: '兩個 0 到 100 的小數加減，答案不會是負數',
+    generateQuestion: () => createDecimalAddSubQuestion()
+});
+
+const createDecimalPointShiftQuestion = () => {
+    const operator = Math.random() < 0.5 ? '×' : '÷';
+    let value;
+    let exponent;
+    let answerValue;
+
+    do {
+        value = createRandomDecimalUpTo100();
+        exponent = randomInt(1, 4);
+        answerValue = operator === '×'
+            ? multiplyDecimalByPowerOfTen(value, exponent)
+            : divideDecimalByPowerOfTen(value, exponent);
+    } while (
+        operator === '×'
+        && compareDecimalOrder(answerValue, createDecimalValue(10000, 0)) > 0
+    );
+
+    const multiplier = 10 ** exponent;
+
+    return createDecimalQuestion({
+        text: `${formatDecimalValue(value)} ${operator} ${multiplier} = ?`,
+        answerValue,
+        meta: {
+            promptType: 'decimal-point-shift',
+            operator,
+            exponent,
+            multiplier,
+            valueUnits: value.units,
+            valueScale: value.scale,
+            valueLabel: formatDecimalValue(value),
+            answerUnits: answerValue.units,
+            answerScale: answerValue.scale,
+            answerLabel: formatDecimalValue(answerValue)
+        }
+    });
+};
+
+const createDecimalPointShiftUnit = () => ({
+    id: 'decimal_point_shift',
+    name: '小數點移動',
+    description: '練習小數乘除 10、100、1000 等 10 的倍數',
+    generateQuestion: () => createDecimalPointShiftQuestion()
+});
+
 const createArithmeticQuestion = ({ expression, ruleType, usesImplicitMultiplication = false }) => {
     const evaluation = evaluateExpression(expression);
 
@@ -715,6 +990,18 @@ export const categories = [
             createMixedFractionUnit(),
             createFractionIntegerMultipleUnit(),
             createFractionAddSubUnit()
+        ]
+    },
+    {
+        id: 'decimals',
+        name: '小數',
+        description: '認識小數、小數加減與小數點移動',
+        icon: '🔢',
+        color: '#55efc4',
+        units: [
+            createDecimalIntroductionUnit(),
+            createDecimalAddSubUnit(),
+            createDecimalPointShiftUnit()
         ]
     },
     {

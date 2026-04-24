@@ -2,9 +2,9 @@ import katex from 'katex';
 
 import { expressionToTex } from '../game/expressionUtils.js';
 
-const CORE_NUMBER_PATTERN = /\d+\s+\d+\/\d+|\d+\/\d+|\d+/g;
-const MATH_CONTEXT_PATTERN = /[0-9+\-×÷=(){}\[\]＋－（）［］｛｝?？\s]/;
-const TOKEN_PATTERN = /\d+\s+\d+\/\d+|\d+\/\d+|\d+|[+\-×÷=(){}\[\]?]/g;
+const CORE_NUMBER_PATTERN = /\d+\s+\d+\/\d+|\d+\/\d+|\d+\.\d+|\d+/g;
+const MATH_CONTEXT_PATTERN = /[0-9.+\-×÷=(){}\[\]＋－（）［］｛｝?？\s]/;
+const TOKEN_PATTERN = /\d+\s+\d+\/\d+|\d+\/\d+|\d+\.\d+|\d+|[+\-×÷=(){}\[\]?]/g;
 const OPENING_PATTERN = /^[([{]$/;
 const CLOSING_PATTERN = /^[)\]}]$/;
 
@@ -53,7 +53,7 @@ const tokenToMathPiece = (token) => {
         };
     }
 
-    if (/^\d+$/.test(token)) {
+    if (/^\d+(?:\.\d+)?$/.test(token)) {
         return {
             type: 'atom',
             tex: token

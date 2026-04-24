@@ -1,7 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getCategoryById, getUnitById } from '../game/categories.js';
+import FieldAnswerForm from './FieldAnswerForm.jsx';
 import FractionAnswerForm from './FractionAnswerForm.jsx';
 import MathContent from './MathContent.jsx';
+
+const INPUT_MODE_LABELS = {
+    choice: '選擇題',
+    decimal: '小數作答',
+    fields: '填空題',
+    fraction: '分數作答',
+    number: '數字作答'
+};
 
 function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onRestart }) {
     const category = getCategoryById(categoryId);
@@ -162,7 +171,7 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                     fontSize: '0.95rem'
                 }}>
                     <span>進度: {currentIdx + 1} / {totalQuestions}</span>
-                    <span>{currentQuestion.inputMode === 'choice' ? '選擇題' : currentQuestion.inputMode === 'fraction' ? '分數作答' : '數字作答'}</span>
+                    <span>{INPUT_MODE_LABELS[currentQuestion.inputMode] ?? '數字作答'}</span>
                 </div>
 
                 <div style={{ background: '#eee', height: '10px', borderRadius: '5px', marginBottom: '20px' }}>
@@ -217,13 +226,23 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                         onValidationError={setValidationError}
                         onSubmit={submitAnswer}
                     />
+                ) : currentQuestion.inputMode === 'fields' ? (
+                    <FieldAnswerForm
+                        key={currentIdx}
+                        fields={currentQuestion.fields}
+                        formulaPreview={currentQuestion.formulaPreview}
+                        feedback={feedback}
+                        validationError={validationError}
+                        onValidationError={setValidationError}
+                        onSubmit={submitAnswer}
+                    />
                 ) : (
                     <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', position: 'relative', marginBottom: '10px' }}>
                         <div style={{ flex: 1, position: 'relative' }}>
                             <input
                                 ref={inputRef}
                                 type={currentQuestion.inputMode === 'number' ? 'number' : 'text'}
-                                inputMode={currentQuestion.inputMode === 'number' ? 'numeric' : 'text'}
+                                inputMode={currentQuestion.inputMode === 'number' ? 'numeric' : currentQuestion.inputMode === 'decimal' ? 'decimal' : 'text'}
                                 value={userInput}
                                 onChange={(event) => {
                                     setUserInput(event.target.value);
@@ -238,7 +257,7 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                     </form>
                 )}
 
-                {validationError && currentQuestion.inputMode !== 'fraction' && (
+                {validationError && currentQuestion.inputMode !== 'fraction' && currentQuestion.inputMode !== 'fields' && (
                     <p className="inline-error">{validationError}</p>
                 )}
 
