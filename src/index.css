@@ -535,6 +535,24 @@ body {
   background: rgba(225, 112, 85, 0.1);
 }
 
+.field-answer-fraction-pair {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-self: center;
+  gap: 10px;
+  width: min(100%, 220px);
+}
+
+.field-answer-fraction-field {
+  width: min(100%, 180px);
+}
+
+.field-answer-fraction-divider {
+  width: min(180px, 28vw);
+  border-top: 3px solid var(--color-accent);
+}
+
 .field-formula-preview {
   display: flex;
   align-items: center;
@@ -733,6 +751,12 @@ body {
 
   .field-answer-grid {
     grid-template-columns: 1fr;
+  }
+
+  .field-answer-fraction-pair,
+  .field-answer-fraction-field,
+  .field-answer-fraction-divider {
+    width: 100%;
   }
 
   .field-answer-actions .btn {

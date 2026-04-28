@@ -12,6 +12,9 @@ const createFormulaPreviewText = (formulaPreview, values) => {
         .join(' + ');
 };
 
+const feedbackClassName = (feedback) =>
+    `field-answer-input${feedback ? (feedback.isCorrect ? ' is-correct' : ' is-wrong') : ''}`;
+
 function FieldAnswerForm({ fields, formulaPreview, feedback, validationError, onValidationError, onSubmit }) {
     const [values, setValues] = useState({});
     const firstInputRef = useRef(null);
@@ -42,20 +45,59 @@ function FieldAnswerForm({ fields, formulaPreview, feedback, validationError, on
     return (
         <form className="field-answer-form" onSubmit={handleSubmit}>
             <div className="field-answer-grid">
-                {fields.map((field, index) => (
-                    <label key={field.id} className="field-answer-field">
-                        <span className="field-answer-label">{field.label}</span>
-                        <input
-                            ref={index === 0 ? firstInputRef : null}
-                            type="text"
-                            inputMode={field.inputMode === 'decimal' ? 'decimal' : 'numeric'}
-                            value={values[field.id] ?? ''}
-                            onChange={(event) => updateValue(field.id, event.target.value)}
-                            disabled={!!feedback}
-                            className={`field-answer-input${feedback ? (feedback.isCorrect ? ' is-correct' : ' is-wrong') : ''}`}
-                        />
-                    </label>
-                ))}
+                {fields.map((field, index) => {
+                    const nextField = fields[index + 1];
+
+                    if (field.id === 'denominator' && fields[index - 1]?.id === 'numerator') {
+                        return null;
+                    }
+
+                    if (field.id === 'numerator' && nextField?.id === 'denominator') {
+                        return (
+                            <div key="fraction-answer" className="field-answer-fraction-pair" role="group" aria-label="分數">
+                                <label className="field-answer-field field-answer-fraction-field">
+                                    <span className="field-answer-label">{field.label}</span>
+                                    <input
+                                        ref={index === 0 ? firstInputRef : null}
+                                        type="text"
+                                        inputMode={field.inputMode === 'decimal' ? 'decimal' : 'numeric'}
+                                        value={values[field.id] ?? ''}
+                                        onChange={(event) => updateValue(field.id, event.target.value)}
+                                        disabled={!!feedback}
+                                        className={feedbackClassName(feedback)}
+                                    />
+                                </label>
+                                <div className="field-answer-fraction-divider" />
+                                <label className="field-answer-field field-answer-fraction-field">
+                                    <span className="field-answer-label">{nextField.label}</span>
+                                    <input
+                                        type="text"
+                                        inputMode={nextField.inputMode === 'decimal' ? 'decimal' : 'numeric'}
+                                        value={values[nextField.id] ?? ''}
+                                        onChange={(event) => updateValue(nextField.id, event.target.value)}
+                                        disabled={!!feedback}
+                                        className={feedbackClassName(feedback)}
+                                    />
+                                </label>
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <label key={field.id} className="field-answer-field">
+                            <span className="field-answer-label">{field.label}</span>
+                            <input
+                                ref={index === 0 ? firstInputRef : null}
+                                type="text"
+                                inputMode={field.inputMode === 'decimal' ? 'decimal' : 'numeric'}
+                                value={values[field.id] ?? ''}
+                                onChange={(event) => updateValue(field.id, event.target.value)}
+                                disabled={!!feedback}
+                                className={feedbackClassName(feedback)}
+                            />
+                        </label>
+                    );
+                })}
             </div>
 
             {formulaPreviewText && (
