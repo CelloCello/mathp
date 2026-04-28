@@ -8,6 +8,7 @@ import {
     createDecimalValue,
     divideDecimalByPowerOfTen,
     formatDecimalValue,
+    multiplyDecimalByInteger,
     multiplyDecimalByPowerOfTen,
     parseDecimalInput,
     subtractDecimalValues
@@ -39,9 +40,13 @@ test('decimal arithmetic uses scaled integer operations', () => {
     const twoTenths = createDecimalValue(2, 1);
     const sum = addDecimalValues(oneTenth, twoTenths);
     const difference = subtractDecimalValues(createDecimalValue(100, 2), createDecimalValue(1, 3));
+    const product = multiplyDecimalByInteger(createDecimalValue(125, 2), 8);
+    const smallProduct = multiplyDecimalByInteger(createDecimalValue(7, 2), 12);
 
     assert.equal(formatDecimalValue(sum), '0.3');
     assert.equal(formatDecimalValue(difference), '0.999');
+    assert.equal(formatDecimalValue(product), '10');
+    assert.equal(formatDecimalValue(smallProduct), '0.84');
     assert.equal(compareDecimalOrder(createDecimalValue(123, 2), createDecimalValue(1229, 3)), 1);
 });
 

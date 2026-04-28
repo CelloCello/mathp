@@ -105,6 +105,14 @@ export const subtractDecimalValues = (left, right) => {
     return createDecimalValue(units, scale);
 };
 
+export const multiplyDecimalByInteger = (value, multiplier) => {
+    if (!Number.isInteger(multiplier) || multiplier < 0) {
+        throw new Error('Multiplier must be a non-negative integer.');
+    }
+
+    return createDecimalValue(value.units * multiplier, value.scale);
+};
+
 export const multiplyDecimalByPowerOfTen = (value, exponent) => {
     if (!Number.isInteger(exponent) || exponent < 0) {
         throw new Error('Exponent must be a non-negative integer.');

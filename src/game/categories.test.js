@@ -6,6 +6,7 @@ import {
     createDecimalValue,
     compareDecimalOrder,
     formatDecimalValue,
+    multiplyDecimalByInteger,
     multiplyDecimalByPowerOfTen,
     divideDecimalByPowerOfTen,
     addDecimalValues,
@@ -195,13 +196,15 @@ test('arithmetic unit emits all order-of-operations rule types with integer-safe
     assert.equal(sawImplicitMultiplication, true);
 });
 
-test('decimal category exposes the three expected units and input modes', () => {
+test('decimal category exposes the expected units and input modes', () => {
     const introduction = getUnitById('decimals', 'decimal_introduction');
     const addSub = getUnitById('decimals', 'decimal_add_subtract');
+    const integerMultiply = getUnitById('decimals', 'decimal_integer_multiply');
     const pointShift = getUnitById('decimals', 'decimal_point_shift');
 
     assert.equal(introduction.generateQuestion().inputMode, 'fields');
     assert.equal(addSub.generateQuestion().inputMode, 'decimal');
+    assert.equal(integerMultiply.generateQuestion().inputMode, 'decimal');
     assert.equal(pointShift.generateQuestion().inputMode, 'decimal');
 });
 
@@ -294,6 +297,59 @@ test('decimal add/subtract questions stay in range and never subtract below zero
         assert.equal(answerScale, expected.scale);
         assert.equal(question.evaluate(answerLabel.includes('.') ? `${answerLabel}0` : `${answerLabel}.0`).isCorrect, true);
     }
+});
+
+test('decimal integer multiplication questions stay in range and use exact answers', () => {
+    const unit = getUnitById('decimals', 'decimal_integer_multiply');
+    const seenPatterns = new Set();
+    const seenScales = new Set();
+    let sawFriendlyMultiplier = false;
+    let sawLargerMultiplier = false;
+
+    for (let index = 0; index < 800; index += 1) {
+        const question = unit.generateQuestion();
+        const {
+            promptType,
+            pattern,
+            decimalUnits,
+            decimalScale,
+            decimalLabel,
+            multiplier,
+            answerUnits,
+            answerScale,
+            answerLabel
+        } = question.meta;
+        const value = createDecimalValue(decimalUnits, decimalScale);
+        const expected = multiplyDecimalByInteger(value, multiplier);
+        const equivalentAnswer = answerLabel.includes('.') ? `${answerLabel}0` : `${answerLabel}.0`;
+
+        seenPatterns.add(pattern);
+        seenScales.add(decimalScale);
+        sawFriendlyMultiplier = sawFriendlyMultiplier || multiplier <= 12 || multiplier % 10 === 0;
+        sawLargerMultiplier = sawLargerMultiplier || multiplier > 12;
+
+        assert.equal(question.inputMode, 'decimal');
+        assert.equal(promptType, 'decimal-integer-multiply');
+        assert.equal(question.text, `${decimalLabel} × ${multiplier} = ?`);
+        assert.ok(decimalUnits > 0);
+        assert.ok(decimalScale >= 1 && decimalScale <= 2);
+        assert.ok(decimalUnits < 100 * (10 ** decimalScale));
+        assert.equal(formatDecimalValue(value), decimalLabel);
+        assert.ok(multiplier >= 1 && multiplier <= 99);
+        assert.equal(formatDecimalValue(expected), answerLabel);
+        assert.equal(answerUnits, expected.units);
+        assert.equal(answerScale, expected.scale);
+        assert.equal(question.evaluate(answerLabel).isCorrect, true);
+        assert.equal(question.evaluate(equivalentAnswer).isCorrect, true);
+    }
+
+    assert.deepEqual(
+        [...seenPatterns].sort(),
+        ['easy-one-decimal', 'easy-two-decimal', 'mixed-two-decimal'].sort()
+    );
+    assert.deepEqual([...seenScales].sort(), [1, 2]);
+    assert.equal(sawFriendlyMultiplier, true);
+    assert.equal(sawLargerMultiplier, true);
 });
 
 test('decimal point shift questions use powers of ten and exact answers', () => {

@@ -4,6 +4,7 @@ import {
     createDecimalValue,
     divideDecimalByPowerOfTen,
     formatDecimalValue,
+    multiplyDecimalByInteger,
     multiplyDecimalByPowerOfTen,
     subtractDecimalValues
 } from './decimalUtils.js';
@@ -132,6 +133,17 @@ const createRandomDecimalUpTo100 = () => {
     const maxUnits = 100 * (10 ** scale);
 
     return createDecimalValue(randomInt(0, maxUnits), scale);
+};
+
+const createRandomDecimalWithExactScale = (scale) => {
+    const maxUnits = (100 * (10 ** scale)) - 1;
+    let units;
+
+    do {
+        units = randomInt(1, maxUnits);
+    } while (units % 10 === 0);
+
+    return createDecimalValue(units, scale);
 };
 
 const createDecimalField = ({ id, label, expectedValue }) => ({
@@ -719,6 +731,50 @@ const createDecimalAddSubUnit = () => ({
     generateQuestion: () => createDecimalAddSubQuestion()
 });
 
+const FRIENDLY_INTEGER_MULTIPLIERS = [
+    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+    20, 30, 40, 50, 60, 70, 80, 90
+];
+
+const createDecimalIntegerMultiplyQuestion = () => {
+    const roll = Math.random();
+    const pattern = roll < 0.6
+        ? 'easy-one-decimal'
+        : roll < 0.9
+            ? 'easy-two-decimal'
+            : 'mixed-two-decimal';
+    const value = createRandomDecimalWithExactScale(pattern === 'easy-one-decimal' ? 1 : 2);
+    const multiplier = pattern === 'mixed-two-decimal'
+        ? randomInt(13, 99)
+        : pickRandom(FRIENDLY_INTEGER_MULTIPLIERS);
+    const answerValue = multiplyDecimalByInteger(value, multiplier);
+    const valueLabel = formatDecimalValue(value);
+    const answerLabel = formatDecimalValue(answerValue);
+
+    return createDecimalQuestion({
+        text: `${valueLabel} × ${multiplier} = ?`,
+        answerValue,
+        meta: {
+            promptType: 'decimal-integer-multiply',
+            pattern,
+            decimalUnits: value.units,
+            decimalScale: value.scale,
+            decimalLabel: valueLabel,
+            multiplier,
+            answerUnits: answerValue.units,
+            answerScale: answerValue.scale,
+            answerLabel
+        }
+    });
+};
+
+const createDecimalIntegerMultiplyUnit = () => ({
+    id: 'decimal_integer_multiply',
+    name: '小數乘整數',
+    description: '練習一位與二位小數乘以整數',
+    generateQuestion: () => createDecimalIntegerMultiplyQuestion()
+});
+
 const createDecimalPointShiftQuestion = () => {
     const operator = Math.random() < 0.5 ? '×' : '÷';
     let value;
@@ -995,12 +1051,13 @@ export const categories = [
     {
         id: 'decimals',
         name: '小數',
-        description: '認識小數、小數加減與小數點移動',
+        description: '認識小數、小數加減、小數乘整數與小數點移動',
         icon: '🔢',
         color: '#55efc4',
         units: [
             createDecimalIntroductionUnit(),
             createDecimalAddSubUnit(),
+            createDecimalIntegerMultiplyUnit(),
             createDecimalPointShiftUnit()
         ]
     },
