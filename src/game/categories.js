@@ -343,6 +343,8 @@ const createFieldResultLabels = (fields, values) => fields
     .map((field) => `${field.label}: ${values[field.id]}`)
     .join('、');
 
+const formatRawFractionLabel = (numerator, denominator) => `${numerator}/${denominator}`;
+
 const createEquivalentFractionConversionQuestion = () => {
     const base = createCurriculumProperFractionValue();
     const multipliers = shuffle([2, 3, 4, 5, 6]).slice(0, 2);
@@ -440,9 +442,8 @@ const createComparisonOperand = () => {
             kind,
             whole,
             numerator: (whole * denominator) + numerator,
-            displayNumerator: numerator,
             denominator,
-            label: `${whole} ${numerator}/${denominator}`
+            label: `${whole} ${formatRawFractionLabel(numerator, denominator)}`
         };
     }
 
@@ -453,7 +454,7 @@ const createComparisonOperand = () => {
             kind,
             numerator,
             denominator,
-            label: `${numerator}/${denominator}`
+            label: formatRawFractionLabel(numerator, denominator)
         };
     }
 
@@ -463,7 +464,7 @@ const createComparisonOperand = () => {
         kind,
         numerator,
         denominator,
-        label: `${numerator}/${denominator}`
+        label: formatRawFractionLabel(numerator, denominator)
     };
 };
 
@@ -485,13 +486,19 @@ const createEqualUnlikeDenominatorComparison = () => {
             kind: 'proper',
             numerator: base.numerator * multipliers[0],
             denominator: base.denominator * multipliers[0],
-            label: `${base.numerator * multipliers[0]}/${base.denominator * multipliers[0]}`
+            label: formatRawFractionLabel(
+                base.numerator * multipliers[0],
+                base.denominator * multipliers[0]
+            )
         },
         right: {
             kind: 'proper',
             numerator: base.numerator * multipliers[1],
             denominator: base.denominator * multipliers[1],
-            label: `${base.numerator * multipliers[1]}/${base.denominator * multipliers[1]}`
+            label: formatRawFractionLabel(
+                base.numerator * multipliers[1],
+                base.denominator * multipliers[1]
+            )
         }
     };
 };

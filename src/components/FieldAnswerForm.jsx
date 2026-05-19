@@ -18,21 +18,27 @@ const feedbackClassName = (feedback) =>
 const choiceButtonClassName = (feedback, isSelected) =>
     `field-segmented-choice-option${isSelected ? ' is-selected' : ''}${feedback && isSelected ? (feedback.isCorrect ? ' is-correct' : ' is-wrong') : ''}`;
 
+const isNumeratorField = (field) => field.id.toLowerCase().includes('numerator');
+
+const isDenominatorField = (field) => field.id.toLowerCase().includes('denominator');
+
+const isLegacyFractionPair = (numeratorField, denominatorField) =>
+    numeratorField.id === 'numerator' && denominatorField.id === 'denominator';
+
+const isTaggedFractionPair = (numeratorField, denominatorField) =>
+    Boolean(
+        numeratorField.fractionPairId
+        && denominatorField.fractionPairId === numeratorField.fractionPairId
+        && isNumeratorField(numeratorField)
+        && isDenominatorField(denominatorField)
+    );
+
 const isFractionPairStart = (field, nextField) => {
     if (!nextField) {
         return false;
     }
 
-    if (field.id === 'numerator' && nextField.id === 'denominator') {
-        return true;
-    }
-
-    return Boolean(
-        field.fractionPairId
-        && nextField.fractionPairId === field.fractionPairId
-        && field.id.toLowerCase().includes('numerator')
-        && nextField.id.toLowerCase().includes('denominator')
-    );
+    return isLegacyFractionPair(field, nextField) || isTaggedFractionPair(field, nextField);
 };
 
 const isFractionPairEnd = (field, previousField) => {
@@ -40,16 +46,7 @@ const isFractionPairEnd = (field, previousField) => {
         return false;
     }
 
-    if (field.id === 'denominator' && previousField.id === 'numerator') {
-        return true;
-    }
-
-    return Boolean(
-        field.fractionPairId
-        && previousField.fractionPairId === field.fractionPairId
-        && field.id.toLowerCase().includes('denominator')
-        && previousField.id.toLowerCase().includes('numerator')
-    );
+    return isFractionPairStart(previousField, field);
 };
 
 function FieldAnswerForm({ fields, fieldLayout, formulaPreview, feedback, validationError, onValidationError, onSubmit }) {
