@@ -230,6 +230,7 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                     <FieldAnswerForm
                         key={currentIdx}
                         fields={currentQuestion.fields}
+                        fieldLayout={currentQuestion.fieldLayout}
                         formulaPreview={currentQuestion.formulaPreview}
                         feedback={feedback}
                         validationError={validationError}

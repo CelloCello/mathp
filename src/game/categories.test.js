@@ -36,14 +36,114 @@ test('fraction category unit input modes match the plan requirements', () => {
     const proper = getUnitById('fractions', 'proper_fraction');
     const improper = getUnitById('fractions', 'improper_fraction');
     const mixed = getUnitById('fractions', 'mixed_fraction');
+    const equivalent = getUnitById('fractions', 'equivalent_fraction');
     const integerMultiple = getUnitById('fractions', 'fraction_integer_multiple');
     const addSub = getUnitById('fractions', 'fraction_add_subtract');
 
     assert.equal(proper.generateQuestion().inputMode, 'choice');
     assert.equal(improper.generateQuestion().inputMode, 'choice');
     assert.equal(mixed.generateQuestion().inputMode, 'fraction');
+    assert.equal(equivalent.generateQuestion().inputMode, 'fields');
     assert.equal(integerMultiple.generateQuestion().inputMode, 'fraction');
     assert.equal(addSub.generateQuestion().inputMode, 'fraction');
+});
+
+test('equivalent fraction unit emits conversion and comparison questions with curriculum-friendly constraints', () => {
+    const unit = getUnitById('fractions', 'equivalent_fraction');
+    const seenPromptTypes = new Set();
+    const seenComparisonKinds = new Set();
+
+    for (let index = 0; index < 800; index += 1) {
+        const question = unit.generateQuestion();
+        const { meta } = question;
+
+        seenPromptTypes.add(meta.promptType);
+
+        assert.equal(question.inputMode, 'fields');
+        assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
+        assert.equal(question.evaluate(meta.correctInput).validationError, null);
+
+        if (meta.promptType === 'equivalent-fraction-conversion') {
+            assert.deepEqual(
+                question.fields.map((field) => field.fractionPairId),
+                ['first', 'first', 'second', 'second']
+            );
+            assert.ok(meta.baseNumerator > 0);
+            assert.ok(meta.baseNumerator < meta.baseDenominator);
+            assert.ok(meta.baseDenominator >= 2 && meta.baseDenominator <= 12);
+            assert.ok(meta.multipliers.every((multiplier) => multiplier >= 2 && multiplier <= 6));
+            assert.notEqual(meta.answers[0].denominator, meta.answers[1].denominator);
+
+            const duplicate = {
+                ...meta.correctInput,
+                secondNumerator: meta.correctInput.firstNumerator,
+                secondDenominator: meta.correctInput.firstDenominator
+            };
+            const originalDenominator = {
+                ...meta.correctInput,
+                firstNumerator: String(meta.baseNumerator),
+                firstDenominator: String(meta.baseDenominator)
+            };
+            const nonEquivalent = {
+                ...meta.correctInput,
+                firstNumerator: String(Number(meta.correctInput.firstNumerator) + 1)
+            };
+
+            assert.equal(question.evaluate(duplicate).isCorrect, false);
+            assert.equal(question.evaluate(originalDenominator).isCorrect, false);
+            assert.equal(question.evaluate(nonEquivalent).isCorrect, false);
+        }
+
+        if (meta.promptType === 'unlike-denominator-comparison') {
+            const symbolField = question.fields.find((field) => field.id === 'comparisonSymbol');
+            seenComparisonKinds.add(meta.leftKind);
+            seenComparisonKinds.add(meta.rightKind);
+
+            assert.match(question.text, /^比較這兩數的大小：/);
+            assert.doesNotMatch(question.text, /\?/);
+            assert.deepEqual(question.fieldLayout, {
+                kind: 'fraction-comparison',
+                leftLabel: meta.leftLabel,
+                rightLabel: meta.rightLabel
+            });
+            assert.equal(symbolField.inputKind, 'segmented-choice');
+            assert.deepEqual(symbolField.options, ['>', '<', '=']);
+            assert.ok(['proper', 'improper', 'mixed'].includes(meta.leftKind));
+            assert.ok(['proper', 'improper', 'mixed'].includes(meta.rightKind));
+            assert.ok(meta.leftNumerator > 0);
+            assert.ok(meta.rightNumerator > 0);
+            assert.equal(meta.leftKind === 'proper', meta.leftNumerator < meta.leftDenominator);
+            assert.equal(meta.rightKind === 'proper', meta.rightNumerator < meta.rightDenominator);
+            assert.equal(meta.leftKind === 'mixed', meta.leftLabel.includes(' '));
+            assert.equal(meta.rightKind === 'mixed', meta.rightLabel.includes(' '));
+            assert.notEqual(meta.leftDenominator, meta.rightDenominator);
+            assert.ok(meta.leftDenominator >= 2 && meta.leftDenominator <= 12);
+            assert.ok(meta.rightDenominator >= 2 && meta.rightDenominator <= 12);
+            assert.ok(meta.commonDenominator <= 60);
+            assert.equal(meta.commonDenominator % meta.leftDenominator, 0);
+            assert.equal(meta.commonDenominator % meta.rightDenominator, 0);
+
+            const wrongLeft = {
+                ...meta.correctInput,
+                leftNumerator: String(Number(meta.correctInput.leftNumerator) + 1)
+            };
+            const wrongSymbol = {
+                ...meta.correctInput,
+                comparisonSymbol: meta.comparisonSymbol === '>' ? '<' : '>'
+            };
+
+            assert.equal(question.evaluate(wrongLeft).isCorrect, false);
+            assert.equal(question.evaluate(wrongSymbol).isCorrect, false);
+        }
+    }
+
+    assert.deepEqual(
+        [...seenPromptTypes].sort(),
+        ['equivalent-fraction-conversion', 'unlike-denominator-comparison'].sort()
+    );
+    assert.ok(seenComparisonKinds.has('proper'));
+    assert.ok(seenComparisonKinds.has('improper'));
+    assert.ok(seenComparisonKinds.has('mixed'));
 });
 
 test('approximation questions only use hundreds, thousands, or ten-thousands', () => {
