@@ -9,6 +9,7 @@ import {
     subtractDecimalValues
 } from './decimalUtils.js';
 import {
+    compareFractionValues,
     gcd,
     createFractionValue,
     formatFractionValue,
@@ -50,6 +51,8 @@ const DECIMAL_PLACE_VALUES = [
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const pickRandom = (items) => items[randomInt(0, items.length - 1)];
+
+const lcm = (left, right) => Math.abs(left * right) / gcd(left, right);
 
 const shuffle = (items) => {
     const next = [...items];
@@ -162,6 +165,21 @@ const createIntegerField = ({ id, label, expectedValue }) => ({
     expectedValue,
     displayValue: String(expectedValue),
     inputMode: 'numeric'
+});
+
+const createNumericInputField = ({ id, label, fractionPairId = null }) => ({
+    id,
+    label,
+    fractionPairId,
+    inputMode: 'numeric'
+});
+
+const createSegmentedChoiceField = ({ id, label, options }) => ({
+    id,
+    label,
+    inputKind: 'segmented-choice',
+    options,
+    inputMode: 'text'
 });
 
 const getDecimalDigits = (value) =>
@@ -278,6 +296,324 @@ const createReducedProperFractionValue = () => {
     const numerator = pickRandom(numerators);
 
     return createFractionValue(numerator, denominator);
+};
+
+const createCurriculumProperFractionValue = (maxDenominator = 12) => {
+    const denominator = randomInt(2, maxDenominator);
+    const numerator = randomInt(1, denominator - 1);
+
+    return createFractionValue(numerator, denominator);
+};
+
+const parsePositiveIntegerField = (input, fieldLabel) => {
+    const value = String(input ?? '').trim();
+
+    if (!value) {
+        return { isValid: false, error: `請填寫「${fieldLabel}」。` };
+    }
+
+    if (!/^\d+$/.test(value)) {
+        return { isValid: false, error: `「${fieldLabel}」請輸入整數。` };
+    }
+
+    const parsed = Number(value);
+
+    if (parsed <= 0) {
+        return { isValid: false, error: `「${fieldLabel}」請輸入大於 0 的整數。` };
+    }
+
+    return { isValid: true, value: parsed, displayLabel: value };
+};
+
+const parseSymbolField = (input, fieldLabel) => {
+    const value = String(input ?? '').trim();
+
+    if (!value) {
+        return { isValid: false, error: `請選擇「${fieldLabel}」。` };
+    }
+
+    if (!['>', '<', '='].includes(value)) {
+        return { isValid: false, error: `「${fieldLabel}」請選擇 >、< 或 =。` };
+    }
+
+    return { isValid: true, value, displayLabel: value };
+};
+
+const createFieldResultLabels = (fields, values) => fields
+    .map((field) => `${field.label}: ${values[field.id]}`)
+    .join('、');
+
+const createEquivalentFractionConversionQuestion = () => {
+    const base = createCurriculumProperFractionValue();
+    const multipliers = shuffle([2, 3, 4, 5, 6]).slice(0, 2);
+    const answers = multipliers.map((multiplier) => ({
+        numerator: base.numerator * multiplier,
+        denominator: base.denominator * multiplier,
+        multiplier
+    }));
+    const fields = [
+        createNumericInputField({ id: 'firstNumerator', label: '第 1 組分子', fractionPairId: 'first' }),
+        createNumericInputField({ id: 'firstDenominator', label: '第 1 組分母', fractionPairId: 'first' }),
+        createNumericInputField({ id: 'secondNumerator', label: '第 2 組分子', fractionPairId: 'second' }),
+        createNumericInputField({ id: 'secondDenominator', label: '第 2 組分母', fractionPairId: 'second' })
+    ];
+    const correctInput = {
+        firstNumerator: String(answers[0].numerator),
+        firstDenominator: String(answers[0].denominator),
+        secondNumerator: String(answers[1].numerator),
+        secondDenominator: String(answers[1].denominator)
+    };
+
+    return {
+        text: `寫出兩個和 ${base.numerator}/${base.denominator} 等值的分數`,
+        inputMode: 'fields',
+        placeholder: '填入答案',
+        fields,
+        meta: {
+            promptType: 'equivalent-fraction-conversion',
+            baseNumerator: base.numerator,
+            baseDenominator: base.denominator,
+            multipliers,
+            answers,
+            correctInput
+        },
+        evaluate: (rawInput) => {
+            const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
+            const firstNumerator = parsePositiveIntegerField(input.firstNumerator, '第 1 組分子');
+            const firstDenominator = parsePositiveIntegerField(input.firstDenominator, '第 1 組分母');
+            const secondNumerator = parsePositiveIntegerField(input.secondNumerator, '第 2 組分子');
+            const secondDenominator = parsePositiveIntegerField(input.secondDenominator, '第 2 組分母');
+            const parsedFields = [firstNumerator, firstDenominator, secondNumerator, secondDenominator];
+            const invalidField = parsedFields.find((field) => !field.isValid);
+
+            if (invalidField) {
+                return { isCorrect: false, validationError: invalidField.error };
+            }
+
+            const first = createFractionValue(firstNumerator.value, firstDenominator.value);
+            const second = createFractionValue(secondNumerator.value, secondDenominator.value);
+            const isCorrect = compareFractionValues(first, base)
+                && compareFractionValues(second, base)
+                && firstDenominator.value !== base.denominator
+                && secondDenominator.value !== base.denominator
+                && firstDenominator.value !== secondDenominator.value;
+            const userValues = {
+                firstNumerator: firstNumerator.displayLabel,
+                firstDenominator: firstDenominator.displayLabel,
+                secondNumerator: secondNumerator.displayLabel,
+                secondDenominator: secondDenominator.displayLabel
+            };
+
+            return {
+                isCorrect,
+                userAnswerLabel: createFieldResultLabels(fields, userValues),
+                correctAnswerLabel: `第 1 組: ${answers[0].numerator}/${answers[0].denominator}、第 2 組: ${answers[1].numerator}/${answers[1].denominator}`,
+                validationError: null
+            };
+        }
+    };
+};
+
+const getComparisonSymbol = (left, right) => {
+    const order = left.numerator * right.denominator - right.numerator * left.denominator;
+
+    if (order > 0) {
+        return '>';
+    }
+
+    if (order < 0) {
+        return '<';
+    }
+
+    return '=';
+};
+
+const createComparisonOperand = () => {
+    const kind = pickRandom(['proper', 'proper', 'proper', 'improper', 'mixed']);
+    const denominator = randomInt(2, 12);
+
+    if (kind === 'mixed') {
+        const whole = randomInt(1, 3);
+        const numerator = randomInt(1, denominator - 1);
+
+        return {
+            kind,
+            whole,
+            numerator: (whole * denominator) + numerator,
+            displayNumerator: numerator,
+            denominator,
+            label: `${whole} ${numerator}/${denominator}`
+        };
+    }
+
+    if (kind === 'improper') {
+        const numerator = randomInt(denominator + 1, (denominator * 2) - 1);
+
+        return {
+            kind,
+            numerator,
+            denominator,
+            label: `${numerator}/${denominator}`
+        };
+    }
+
+    const numerator = randomInt(1, denominator - 1);
+
+    return {
+        kind,
+        numerator,
+        denominator,
+        label: `${numerator}/${denominator}`
+    };
+};
+
+const createEqualUnlikeDenominatorComparison = () => {
+    let base;
+    let availableMultipliers;
+
+    do {
+        base = createCurriculumProperFractionValue(6);
+        availableMultipliers = [2, 3, 4, 5, 6].filter(
+            (multiplier) => base.denominator * multiplier <= 12
+        );
+    } while (availableMultipliers.length < 2);
+
+    const multipliers = shuffle(availableMultipliers).slice(0, 2);
+
+    return {
+        left: {
+            kind: 'proper',
+            numerator: base.numerator * multipliers[0],
+            denominator: base.denominator * multipliers[0],
+            label: `${base.numerator * multipliers[0]}/${base.denominator * multipliers[0]}`
+        },
+        right: {
+            kind: 'proper',
+            numerator: base.numerator * multipliers[1],
+            denominator: base.denominator * multipliers[1],
+            label: `${base.numerator * multipliers[1]}/${base.denominator * multipliers[1]}`
+        }
+    };
+};
+
+const createDifferentUnlikeDenominatorComparison = () => {
+    let left;
+    let right;
+    let commonDenominator;
+
+    do {
+        left = createComparisonOperand();
+        right = createComparisonOperand();
+        commonDenominator = lcm(left.denominator, right.denominator);
+    } while (
+        left.denominator === right.denominator
+        || commonDenominator > 60
+        || getComparisonSymbol(left, right) === '='
+    );
+
+    return { left, right };
+};
+
+const createUnlikeDenominatorComparisonQuestion = () => {
+    let operands = Math.random() < 0.2
+        ? createEqualUnlikeDenominatorComparison()
+        : createDifferentUnlikeDenominatorComparison();
+    let commonDenominator = lcm(operands.left.denominator, operands.right.denominator);
+
+    while (operands.left.denominator === operands.right.denominator || commonDenominator > 60) {
+        operands = createDifferentUnlikeDenominatorComparison();
+        commonDenominator = lcm(operands.left.denominator, operands.right.denominator);
+    }
+
+    const leftEquivalentNumerator = operands.left.numerator * (commonDenominator / operands.left.denominator);
+    const rightEquivalentNumerator = operands.right.numerator * (commonDenominator / operands.right.denominator);
+    const symbol = getComparisonSymbol(operands.left, operands.right);
+    const fields = [
+        createNumericInputField({ id: 'leftNumerator', label: '左邊通分後分子' }),
+        createNumericInputField({ id: 'commonDenominator', label: '共同分母' }),
+        createNumericInputField({ id: 'rightNumerator', label: '右邊通分後分子' }),
+        createSegmentedChoiceField({ id: 'comparisonSymbol', label: '比較符號', options: ['>', '<', '='] })
+    ];
+    const correctInput = {
+        leftNumerator: String(leftEquivalentNumerator),
+        commonDenominator: String(commonDenominator),
+        rightNumerator: String(rightEquivalentNumerator),
+        comparisonSymbol: symbol
+    };
+
+    return {
+        text: `比較這兩數的大小：${operands.left.label} 和 ${operands.right.label}`,
+        inputMode: 'fields',
+        placeholder: '填入答案',
+        fields,
+        fieldLayout: {
+            kind: 'fraction-comparison',
+            leftLabel: operands.left.label,
+            rightLabel: operands.right.label
+        },
+        meta: {
+            promptType: 'unlike-denominator-comparison',
+            leftKind: operands.left.kind,
+            rightKind: operands.right.kind,
+            leftLabel: operands.left.label,
+            rightLabel: operands.right.label,
+            leftNumerator: operands.left.numerator,
+            leftDenominator: operands.left.denominator,
+            rightNumerator: operands.right.numerator,
+            rightDenominator: operands.right.denominator,
+            commonDenominator,
+            leftEquivalentNumerator,
+            rightEquivalentNumerator,
+            comparisonSymbol: symbol,
+            correctInput
+        },
+        evaluate: (rawInput) => {
+            const input = rawInput && typeof rawInput === 'object' ? rawInput : {};
+            const leftNumerator = parsePositiveIntegerField(input.leftNumerator, '左邊通分後分子');
+            const denominator = parsePositiveIntegerField(input.commonDenominator, '共同分母');
+            const rightNumerator = parsePositiveIntegerField(input.rightNumerator, '右邊通分後分子');
+            const comparisonSymbol = parseSymbolField(input.comparisonSymbol, '比較符號');
+            const parsedFields = [leftNumerator, denominator, rightNumerator, comparisonSymbol];
+            const invalidField = parsedFields.find((field) => !field.isValid);
+
+            if (invalidField) {
+                return { isCorrect: false, validationError: invalidField.error };
+            }
+
+            const leftEquivalent = createFractionValue(leftNumerator.value, denominator.value);
+            const rightEquivalent = createFractionValue(rightNumerator.value, denominator.value);
+            const isCorrect = compareFractionValues(leftEquivalent, operands.left)
+                && compareFractionValues(rightEquivalent, operands.right)
+                && denominator.value % operands.left.denominator === 0
+                && denominator.value % operands.right.denominator === 0
+                && comparisonSymbol.value === symbol;
+            const userValues = {
+                leftNumerator: leftNumerator.displayLabel,
+                commonDenominator: denominator.displayLabel,
+                rightNumerator: rightNumerator.displayLabel,
+                comparisonSymbol: comparisonSymbol.displayLabel
+            };
+
+            return {
+                isCorrect,
+                userAnswerLabel: createFieldResultLabels(fields, userValues),
+                correctAnswerLabel: `左邊: ${leftEquivalentNumerator}/${commonDenominator}、右邊: ${rightEquivalentNumerator}/${commonDenominator}、比較符號: ${symbol}`,
+                validationError: null
+            };
+        }
+    };
+};
+
+const createEquivalentFractionQuestion = () => {
+    const promptType = Math.random() < 0.5
+        ? 'equivalent-fraction-conversion'
+        : 'unlike-denominator-comparison';
+
+    if (promptType === 'equivalent-fraction-conversion') {
+        return createEquivalentFractionConversionQuestion();
+    }
+
+    return createUnlikeDenominatorComparisonQuestion();
 };
 
 const createFractionOperand = (numerator, denominator) => ({
@@ -667,6 +1003,13 @@ const createFractionIntegerMultipleUnit = () => ({
     generateQuestion: () => createFractionIntegerMultipleQuestion()
 });
 
+const createEquivalentFractionUnit = () => ({
+    id: 'equivalent_fraction',
+    name: '等值分數',
+    description: '練習擴分、等值分數與不同分母分數比較',
+    generateQuestion: () => createEquivalentFractionQuestion()
+});
+
 const createDecimalIntroductionQuestion = () => {
     const promptType = pickRandom([
         'decimal-smallest-unit',
@@ -1037,13 +1380,14 @@ export const categories = [
     {
         id: 'fractions',
         name: '分數',
-        description: '真分數、假分數、帶分數、整數倍與同分母加減',
+        description: '真分數、假分數、帶分數、等值分數、整數倍與同分母加減',
         icon: '🥧',
         color: '#f6b93b',
         units: [
             createProperFractionUnit(),
             createImproperFractionUnit(),
             createMixedFractionUnit(),
+            createEquivalentFractionUnit(),
             createFractionIntegerMultipleUnit(),
             createFractionAddSubUnit()
         ]
