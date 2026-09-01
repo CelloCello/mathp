@@ -2,7 +2,6 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { categories, getCategoryById, getUnitById } from './categories.js';
-import { gcd, getFactors, lcm } from './factorUtils.js';
 import {
     createDecimalValue,
     compareDecimalOrder,
@@ -13,6 +12,40 @@ import {
     addDecimalValues,
     subtractDecimalValues
 } from './decimalUtils.js';
+
+const listPositiveDivisors = (value) => {
+    const factors = [];
+
+    for (let candidate = 1; candidate <= value; candidate += 1) {
+        if (value % candidate === 0) {
+            factors.push(candidate);
+        }
+    }
+
+    return factors;
+};
+
+const greatestSharedDivisor = (left, right) => {
+    let result = 1;
+
+    for (let candidate = 1; candidate <= Math.min(left, right); candidate += 1) {
+        if (left % candidate === 0 && right % candidate === 0) {
+            result = candidate;
+        }
+    }
+
+    return result;
+};
+
+const smallestSharedMultiple = (left, right) => {
+    let result = Math.max(left, right);
+
+    while (result % left !== 0 || result % right !== 0) {
+        result += 1;
+    }
+
+    return result;
+};
 
 test('all categories expose units and helpers resolve category / unit ids', () => {
     assert.ok(categories.length >= 8);
@@ -47,7 +80,7 @@ test('find factors unit emits every practice type with bounded, correct answers'
 
         seenPromptTypes.add(meta.promptType);
         assert.ok(meta.target >= 2 && meta.target <= 100);
-        assert.deepEqual(meta.factors, getFactors(meta.target));
+        assert.deepEqual(meta.factors, listPositiveDivisors(meta.target));
 
         if (meta.promptType === 'factor-recognition') {
             const optionValues = question.options.map((option) => Number(option.value));
@@ -62,6 +95,7 @@ test('find factors unit emits every practice type with bounded, correct answers'
 
         if (meta.promptType === 'factor-pair-completion') {
             assert.equal(question.inputMode, 'fields');
+            assert.equal(meta.feedbackAdvance, 'manual-on-wrong');
             assert.ok(meta.factorPairs.length >= 2 && meta.factorPairs.length <= 5);
             assert.ok(meta.factorPairs.every(([left, right]) => left <= right));
             assert.ok(meta.factorPairs.every(([left, right]) => left * right === meta.target));
@@ -77,12 +111,15 @@ test('find factors unit emits every practice type with bounded, correct answers'
         if (meta.promptType === 'factor-list') {
             assert.equal(question.inputMode, 'fields');
             assert.ok(meta.factors.length >= 3 && meta.factors.length <= 10);
-            assert.equal(question.fields.length, meta.factors.length);
+            assert.equal(question.fields.length, 1);
+            assert.equal(question.fields[0].answerKind, 'integer-list');
+            assert.deepEqual(question.fields[0].expectedValues, meta.factors);
+            assert.equal(meta.feedbackAdvance, 'manual-on-wrong');
             assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
 
             const wrongInput = {
                 ...meta.correctInput,
-                factor0: String(Number(meta.correctInput.factor0) + 1)
+                factors: `${meta.correctInput.factors}, ${meta.target + 1}`
             };
             assert.equal(question.evaluate(wrongInput).isCorrect, false);
         }
@@ -102,7 +139,7 @@ test('common factors unit lists shared factors and greatest common factors withi
     for (let index = 0; index < 800; index += 1) {
         const question = unit.generateQuestion();
         const { meta } = question;
-        const expectedGreatestCommonFactor = gcd(meta.left, meta.right);
+        const expectedGreatestCommonFactor = greatestSharedDivisor(meta.left, meta.right);
 
         seenPromptTypes.add(meta.promptType);
         seenGreatestCommonFactors.add(meta.greatestCommonFactor === 1 ? 'only-one' : 'non-trivial');
@@ -111,17 +148,20 @@ test('common factors unit lists shared factors and greatest common factors withi
         assert.ok(meta.right >= 6 && meta.right <= 60);
         assert.notEqual(meta.left, meta.right);
         assert.equal(meta.greatestCommonFactor, expectedGreatestCommonFactor);
-        assert.deepEqual(meta.commonFactors, getFactors(expectedGreatestCommonFactor));
+        assert.deepEqual(meta.commonFactors, listPositiveDivisors(expectedGreatestCommonFactor));
         assert.doesNotMatch(question.text, /互質|短除法|質因數/);
 
         if (meta.promptType === 'common-factor-list') {
             assert.equal(question.inputMode, 'fields');
-            assert.equal(question.fields.length, meta.commonFactors.length);
+            assert.equal(question.fields.length, 1);
+            assert.equal(question.fields[0].answerKind, 'integer-list');
+            assert.deepEqual(question.fields[0].expectedValues, meta.commonFactors);
+            assert.equal(meta.feedbackAdvance, 'manual-on-wrong');
             assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
 
             const wrongInput = {
                 ...meta.correctInput,
-                commonFactor0: String(Number(meta.correctInput.commonFactor0) + 1)
+                commonFactors: `${meta.correctInput.commonFactors}, ${Math.min(meta.left, meta.right) + 1}`
             };
             assert.equal(question.evaluate(wrongInput).isCorrect, false);
         }
@@ -148,7 +188,7 @@ test('common multiples unit compares positive multiple sequences within grade-fi
     for (let index = 0; index < 800; index += 1) {
         const question = unit.generateQuestion();
         const { meta } = question;
-        const expectedLeastCommonMultiple = lcm(meta.left, meta.right);
+        const expectedLeastCommonMultiple = smallestSharedMultiple(meta.left, meta.right);
 
         seenPromptTypes.add(meta.promptType);
         seenPairKinds.add(meta.isDividingPair ? 'dividing' : 'non-dividing');
@@ -180,6 +220,7 @@ test('common multiples unit compares positive multiple sequences within grade-fi
 
         if (meta.promptType === 'common-multiple-sequence') {
             assert.equal(question.inputMode, 'fields');
+            assert.equal(meta.feedbackAdvance, 'manual-on-wrong');
             assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
 
             const wrongInput = {

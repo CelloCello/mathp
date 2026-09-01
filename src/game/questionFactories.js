@@ -11,6 +11,7 @@ import { compareFractionValues, parseFractionInput } from './fractionUtils.js';
 
 const INTEGER_PATTERN = /^-?\d+$/;
 const NON_NEGATIVE_INTEGER_PATTERN = /^\d+$/;
+const INTEGER_LIST_SEPARATOR_PATTERN = /[\s,，、]+/;
 
 const formatNumberLabel = (value) => Number(value).toLocaleString();
 
@@ -92,6 +93,27 @@ const evaluateFieldAnswer = (field, rawValue) => {
             isValid: true,
             isCorrect: Number(value) === field.expectedValue,
             displayLabel: value
+        };
+    }
+
+    if (field.answerKind === 'integer-list') {
+        const parsedValues = value.split(INTEGER_LIST_SEPARATOR_PATTERN);
+
+        if (!parsedValues.every((item) => NON_NEGATIVE_INTEGER_PATTERN.test(item))) {
+            return {
+                isValid: false,
+                error: `「${field.label}」請用逗號、頓號或空格分隔整數。`
+            };
+        }
+
+        const values = parsedValues.map(Number);
+        const expectedValues = field.expectedValues;
+
+        return {
+            isValid: true,
+            isCorrect: values.length === expectedValues.length
+                && values.every((item, index) => item === expectedValues[index]),
+            displayLabel: values.join('、')
         };
     }
 

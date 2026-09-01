@@ -19,11 +19,15 @@ export const gcd = (left, right) => {
     let a = Math.abs(left);
     let b = Math.abs(right);
 
+    if (a === 0 && b === 0) {
+        throw new Error('gcd requires at least one non-zero integer.');
+    }
+
     while (b !== 0) {
         [a, b] = [b, a % b];
     }
 
-    return a || 1;
+    return a;
 };
 
 export const lcm = (left, right) => {

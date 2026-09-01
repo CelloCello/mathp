@@ -15,6 +15,18 @@ const createFormulaPreviewText = (formulaPreview, values) => {
 const feedbackClassName = (feedback) =>
     `field-answer-input${feedback ? (feedback.isCorrect ? ' is-correct' : ' is-wrong') : ''}`;
 
+const getInputMode = (field) => {
+    if (field.inputMode === 'decimal') {
+        return 'decimal';
+    }
+
+    if (field.inputMode === 'text') {
+        return 'text';
+    }
+
+    return 'numeric';
+};
+
 const choiceButtonClassName = (feedback, isSelected) =>
     `field-segmented-choice-option${isSelected ? ' is-selected' : ''}${feedback && isSelected ? (feedback.isCorrect ? ' is-correct' : ' is-wrong') : ''}`;
 
@@ -194,7 +206,7 @@ function FieldAnswerForm({ fields, fieldLayout, formulaPreview, feedback, valida
                                     <input
                                         ref={index === 0 ? firstInputRef : null}
                                         type="text"
-                                        inputMode={field.inputMode === 'decimal' ? 'decimal' : 'numeric'}
+                                        inputMode={getInputMode(field)}
                                         value={values[field.id] ?? ''}
                                         onChange={(event) => updateValue(field.id, event.target.value)}
                                         disabled={!!feedback}
@@ -206,7 +218,7 @@ function FieldAnswerForm({ fields, fieldLayout, formulaPreview, feedback, valida
                                     <span className="field-answer-label">{nextField.label}</span>
                                     <input
                                         type="text"
-                                        inputMode={nextField.inputMode === 'decimal' ? 'decimal' : 'numeric'}
+                                        inputMode={getInputMode(nextField)}
                                         value={values[nextField.id] ?? ''}
                                         onChange={(event) => updateValue(nextField.id, event.target.value)}
                                         disabled={!!feedback}
@@ -223,11 +235,12 @@ function FieldAnswerForm({ fields, fieldLayout, formulaPreview, feedback, valida
                             <input
                                 ref={index === 0 ? firstInputRef : null}
                                 type="text"
-                                inputMode={field.inputMode === 'decimal' ? 'decimal' : 'numeric'}
+                                inputMode={getInputMode(field)}
                                 value={values[field.id] ?? ''}
                                 onChange={(event) => updateValue(field.id, event.target.value)}
                                 disabled={!!feedback}
                                 className={feedbackClassName(feedback)}
+                                placeholder={field.placeholder}
                             />
                         </label>
                     );

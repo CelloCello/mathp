@@ -165,6 +165,16 @@ const createIntegerField = ({ id, label, expectedValue }) => ({
     inputMode: 'numeric'
 });
 
+const createIntegerListField = ({ id, label, expectedValues }) => ({
+    id,
+    label,
+    answerKind: 'integer-list',
+    expectedValues,
+    displayValue: expectedValues.join('、'),
+    inputMode: 'text',
+    placeholder: '例如：1, 2, 3, 6'
+});
+
 const createNumericInputField = ({ id, label, fractionPairId = null }) => ({
     id,
     label,
@@ -990,6 +1000,7 @@ const createFactorPairCompletionQuestion = () => {
         ),
         meta: {
             promptType: 'factor-pair-completion',
+            feedbackAdvance: 'manual-on-wrong',
             target,
             factors,
             factorPairs,
@@ -1001,21 +1012,18 @@ const createFactorPairCompletionQuestion = () => {
 const createFactorListQuestion = () => {
     const target = pickRandom(FACTOR_PRACTICE_TARGETS);
     const factors = getFactors(target);
-    const correctInput = Object.fromEntries(
-        factors.map((factor, index) => [`factor${index}`, String(factor)])
-    );
+    const correctInput = { factors: factors.join(', ') };
 
     return createFieldQuestion({
         text: `依照由小到大的順序，填出 ${target} 的所有因數。`,
-        fields: factors.map((factor, index) =>
-            createIntegerField({
-                id: `factor${index}`,
-                label: `第 ${index + 1} 個因數`,
-                expectedValue: factor
-            })
-        ),
+        fields: [createIntegerListField({
+            id: 'factors',
+            label: '所有因數',
+            expectedValues: factors
+        })],
         meta: {
             promptType: 'factor-list',
+            feedbackAdvance: 'manual-on-wrong',
             target,
             factors,
             correctInput
@@ -1069,21 +1077,18 @@ const createCommonFactorListQuestion = () => {
         greatestCommonFactor,
         commonFactors
     } = createCommonFactorOperands();
-    const correctInput = Object.fromEntries(
-        commonFactors.map((factor, index) => [`commonFactor${index}`, String(factor)])
-    );
+    const correctInput = { commonFactors: commonFactors.join(', ') };
 
     return createFieldQuestion({
         text: `依照由小到大的順序，填出 ${left} 和 ${right} 的所有公因數。`,
-        fields: commonFactors.map((factor, index) =>
-            createIntegerField({
-                id: `commonFactor${index}`,
-                label: `第 ${index + 1} 個公因數`,
-                expectedValue: factor
-            })
-        ),
+        fields: [createIntegerListField({
+            id: 'commonFactors',
+            label: '所有公因數',
+            expectedValues: commonFactors
+        })],
         meta: {
             promptType: 'common-factor-list',
+            feedbackAdvance: 'manual-on-wrong',
             left,
             right,
             commonFactors,
@@ -1208,6 +1213,7 @@ const createCommonMultipleSequenceQuestion = () => {
         ],
         meta: {
             promptType: 'common-multiple-sequence',
+            feedbackAdvance: 'manual-on-wrong',
             left,
             right,
             leastCommonMultiple,

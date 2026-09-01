@@ -740,6 +740,12 @@ body {
   border: 2px solid #e17055;
 }
 
+.feedback-next-button {
+  display: block;
+  margin: 16px auto 4px;
+  font-size: 1.05rem;
+}
+
 /* Wrong answer review */
 .wrong-review-item {
   padding: 12px;
@@ -890,6 +896,10 @@ body {
   }
 
   .field-answer-actions .btn {
+    width: 100%;
+  }
+
+  .feedback-next-button {
     width: 100%;
   }
 }
