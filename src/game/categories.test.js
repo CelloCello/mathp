@@ -39,13 +39,17 @@ test('fraction category unit input modes match the plan requirements', () => {
     const equivalent = getUnitById('fractions', 'equivalent_fraction');
     const integerMultiple = getUnitById('fractions', 'fraction_integer_multiple');
     const addSub = getUnitById('fractions', 'fraction_add_subtract');
+    const addSubUnlike = getUnitById('fractions', 'fraction_add_subtract_unlike');
 
     assert.equal(proper.generateQuestion().inputMode, 'choice');
     assert.equal(improper.generateQuestion().inputMode, 'choice');
     assert.equal(mixed.generateQuestion().inputMode, 'fraction');
     assert.equal(equivalent.generateQuestion().inputMode, 'fields');
     assert.equal(integerMultiple.generateQuestion().inputMode, 'fraction');
+    assert.equal(addSub.name, '分數加減 (1)');
     assert.equal(addSub.generateQuestion().inputMode, 'fraction');
+    assert.equal(addSubUnlike.name, '分數加減 (2)');
+    assert.equal(addSubUnlike.generateQuestion().inputMode, 'fields');
 });
 
 test('equivalent fraction unit emits conversion and comparison questions with curriculum-friendly constraints', () => {
@@ -200,6 +204,76 @@ test('fraction add/subtract never uses identical operands or zero-result subtrac
         [...seenPatterns].sort(),
         ['fraction-fraction', 'fraction-mixed', 'mixed-fraction', 'mixed-mixed'].sort()
     );
+});
+
+test('unlike denominator fraction add/subtract uses basic proper fractions and fill-in numerators', () => {
+    const unit = getUnitById('fractions', 'fraction_add_subtract_unlike');
+    const seenOperators = new Set();
+
+    for (let index = 0; index < 500; index += 1) {
+        const question = unit.generateQuestion();
+        const { meta } = question;
+
+        seenOperators.add(meta.operator);
+
+        assert.equal(question.inputMode, 'fields');
+        assert.equal(meta.promptType, 'fraction-add-subtract-unlike');
+        assert.match(question.text, /△\/\d+/);
+        assert.match(question.text, /□\/\d+/);
+        assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
+        assert.equal(question.evaluate(meta.correctInput).validationError, null);
+        assert.deepEqual(
+            question.fields.map((field) => field.id),
+            ['triangleNumerator', 'squareNumerator']
+        );
+
+        assert.ok(meta.leftNumerator > 0 && meta.leftNumerator < meta.leftDenominator);
+        assert.ok(meta.rightNumerator > 0 && meta.rightNumerator < meta.rightDenominator);
+        assert.notEqual(meta.leftDenominator, meta.rightDenominator);
+        assert.ok(meta.leftDenominator >= 2 && meta.leftDenominator <= 12);
+        assert.ok(meta.rightDenominator >= 2 && meta.rightDenominator <= 12);
+        assert.ok(meta.commonDenominator <= 60);
+        assert.equal(meta.commonDenominator % meta.leftDenominator, 0);
+        assert.equal(meta.commonDenominator % meta.rightDenominator, 0);
+        assert.equal(
+            meta.leftEquivalentNumerator,
+            meta.leftNumerator * (meta.commonDenominator / meta.leftDenominator)
+        );
+        assert.equal(
+            meta.rightEquivalentNumerator,
+            meta.rightNumerator * (meta.commonDenominator / meta.rightDenominator)
+        );
+
+        if (meta.operator === '+') {
+            assert.equal(
+                meta.resultNumerator,
+                meta.leftEquivalentNumerator + meta.rightEquivalentNumerator
+            );
+            assert.ok(meta.resultNumerator < meta.commonDenominator);
+        }
+
+        if (meta.operator === '-') {
+            assert.equal(
+                meta.resultNumerator,
+                meta.leftEquivalentNumerator - meta.rightEquivalentNumerator
+            );
+            assert.ok(meta.resultNumerator > 0);
+        }
+
+        const wrongTriangle = {
+            ...meta.correctInput,
+            triangleNumerator: String(Number(meta.correctInput.triangleNumerator) + 1)
+        };
+        const wrongSquare = {
+            ...meta.correctInput,
+            squareNumerator: String(Number(meta.correctInput.squareNumerator) + 1)
+        };
+
+        assert.equal(question.evaluate(wrongTriangle).isCorrect, false);
+        assert.equal(question.evaluate(wrongSquare).isCorrect, false);
+    }
+
+    assert.deepEqual([...seenOperators].sort(), ['+', '-']);
 });
 
 test('fraction units expose fractionSpec that matches the expected answer format', () => {

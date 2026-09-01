@@ -40,6 +40,16 @@ test('tokenizeMathContent keeps decimal numbers inside math expressions', () => 
     );
 });
 
+test('tokenizeMathContent renders symbol numerators in fraction fill-in prompts', () => {
+    assert.deepEqual(tokenizeMathContent('2/5 + 7/15 = △/15 + 7/15 = □/15'), [
+        {
+            type: 'math',
+            raw: '2/5 + 7/15 = △/15 + 7/15 = □/15',
+            tex: '\\frac{2}{5} + \\frac{7}{15} = \\frac{\\triangle}{15} + \\frac{7}{15} = \\frac{\\square}{15}'
+        }
+    ]);
+});
+
 test('createExpressionPromptTex renders expression models with prompt suffix', () => {
     const expression = createBinaryNode(
         'multiply',
