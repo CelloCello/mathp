@@ -2,11 +2,15 @@ import katex from 'katex';
 
 import { expressionToTex } from '../game/expressionUtils.js';
 
-const CORE_NUMBER_PATTERN = /\d+\s+\d+\/\d+|\d+\/\d+|\d+\.\d+|\d+/g;
-const MATH_CONTEXT_PATTERN = /[0-9.+\-×÷=(){}\[\]＋－（）［］｛｝?？\s]/;
-const TOKEN_PATTERN = /\d+\s+\d+\/\d+|\d+\/\d+|\d+\.\d+|\d+|[+\-×÷=(){}\[\]?]/g;
+const CORE_NUMBER_PATTERN = /\d+\s+\d+\/\d+|[△□]\/\d+|\d+\/\d+|\d+\.\d+|\d+/g;
+const MATH_CONTEXT_PATTERN = /[0-9.+\-×÷=(){}\[\]＋－（）［］｛｝?？△□\/\s]/;
+const TOKEN_PATTERN = /\d+\s+\d+\/\d+|[△□]\/\d+|\d+\/\d+|\d+\.\d+|\d+|[+\-×÷=(){}\[\]?]/g;
 const OPENING_PATTERN = /^[([{]$/;
 const CLOSING_PATTERN = /^[)\]}]$/;
+const SYMBOL_NUMERATOR_TEX = {
+    '△': '\\triangle',
+    '□': '\\square'
+};
 
 const normalizeMathCharacters = (value) => String(value ?? '')
     .replace(/＋/g, '+')
@@ -41,6 +45,15 @@ const tokenToMathPiece = (token) => {
         return {
             type: 'atom',
             tex: `${mixedMatch[1]}\\frac{${mixedMatch[2]}}{${mixedMatch[3]}}`
+        };
+    }
+
+    const symbolFractionMatch = token.match(/^([△□])\/(\d+)$/);
+
+    if (symbolFractionMatch) {
+        return {
+            type: 'atom',
+            tex: `\\frac{${SYMBOL_NUMERATOR_TEX[symbolFractionMatch[1]]}}{${symbolFractionMatch[2]}}`
         };
     }
 

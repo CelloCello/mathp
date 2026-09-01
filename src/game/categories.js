@@ -861,6 +861,85 @@ const createFractionAddSubQuestion = () => {
     });
 };
 
+const createUnlikeProperFractionOperands = (operator) => {
+    let leftOperand;
+    let rightOperand;
+    let commonDenominator;
+    let leftEquivalentNumerator;
+    let rightEquivalentNumerator;
+
+    do {
+        const leftDenominator = randomInt(2, 12);
+        let rightDenominator;
+
+        do {
+            rightDenominator = randomInt(2, 12);
+        } while (rightDenominator === leftDenominator);
+
+        commonDenominator = lcm(leftDenominator, rightDenominator);
+        leftOperand = createFractionOperand(randomInt(1, leftDenominator - 1), leftDenominator);
+        rightOperand = createFractionOperand(randomInt(1, rightDenominator - 1), rightDenominator);
+        leftEquivalentNumerator = leftOperand.totalNumerator * (commonDenominator / leftOperand.denominator);
+        rightEquivalentNumerator = rightOperand.totalNumerator * (commonDenominator / rightOperand.denominator);
+
+        if (operator === '-' && leftEquivalentNumerator < rightEquivalentNumerator) {
+            [leftOperand, rightOperand] = [rightOperand, leftOperand];
+            [leftEquivalentNumerator, rightEquivalentNumerator] = [rightEquivalentNumerator, leftEquivalentNumerator];
+        }
+    } while (
+        commonDenominator > 60
+        || (operator === '+' && leftEquivalentNumerator + rightEquivalentNumerator >= commonDenominator)
+        || (operator === '-' && leftEquivalentNumerator === rightEquivalentNumerator)
+    );
+
+    return {
+        leftOperand,
+        rightOperand,
+        commonDenominator,
+        leftEquivalentNumerator,
+        rightEquivalentNumerator
+    };
+};
+
+const createFractionAddSubUnlikeQuestion = () => {
+    const operator = Math.random() < 0.5 ? '+' : '-';
+    const {
+        leftOperand,
+        rightOperand,
+        commonDenominator,
+        leftEquivalentNumerator,
+        rightEquivalentNumerator
+    } = createUnlikeProperFractionOperands(operator);
+    const resultNumerator = operator === '+'
+        ? leftEquivalentNumerator + rightEquivalentNumerator
+        : leftEquivalentNumerator - rightEquivalentNumerator;
+    const correctInput = {
+        triangleNumerator: String(leftEquivalentNumerator),
+        squareNumerator: String(resultNumerator)
+    };
+
+    return createFieldQuestion({
+        text: `${leftOperand.label} ${operator} ${rightOperand.label} = △/${commonDenominator} ${operator} ${rightEquivalentNumerator}/${commonDenominator} = □/${commonDenominator}`,
+        fields: [
+            createIntegerField({ id: 'triangleNumerator', label: '△', expectedValue: leftEquivalentNumerator }),
+            createIntegerField({ id: 'squareNumerator', label: '□', expectedValue: resultNumerator })
+        ],
+        meta: {
+            promptType: 'fraction-add-subtract-unlike',
+            operator,
+            leftNumerator: leftOperand.totalNumerator,
+            leftDenominator: leftOperand.denominator,
+            rightNumerator: rightOperand.totalNumerator,
+            rightDenominator: rightOperand.denominator,
+            commonDenominator,
+            leftEquivalentNumerator,
+            rightEquivalentNumerator,
+            resultNumerator,
+            correctInput
+        }
+    });
+};
+
 const createAdditionUnit = () => ({
     id: 'within_10',
     name: '10 以內加法',
@@ -998,9 +1077,16 @@ const createMixedFractionUnit = () => ({
 
 const createFractionAddSubUnit = () => ({
     id: 'fraction_add_subtract',
-    name: '分數加減',
+    name: '分數加減 (1)',
     description: '同分母分數與帶分數的加減法',
     generateQuestion: () => createFractionAddSubQuestion()
+});
+
+const createFractionAddSubUnlikeUnit = () => ({
+    id: 'fraction_add_subtract_unlike',
+    name: '分數加減 (2)',
+    description: '異分母真分數通分後的加減法',
+    generateQuestion: () => createFractionAddSubUnlikeQuestion()
 });
 
 const createFractionIntegerMultipleUnit = () => ({
@@ -1387,7 +1473,7 @@ export const categories = [
     {
         id: 'fractions',
         name: '分數',
-        description: '真分數、假分數、帶分數、等值分數、整數倍與同分母加減',
+        description: '真分數、假分數、帶分數、等值分數、整數倍與分數加減',
         icon: '🥧',
         color: '#f6b93b',
         units: [
@@ -1396,7 +1482,8 @@ export const categories = [
             createMixedFractionUnit(),
             createEquivalentFractionUnit(),
             createFractionIntegerMultipleUnit(),
-            createFractionAddSubUnit()
+            createFractionAddSubUnit(),
+            createFractionAddSubUnlikeUnit()
         ]
     },
     {
