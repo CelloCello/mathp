@@ -2,6 +2,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
 import { categories, getCategoryById, getUnitById } from './categories.js';
+import { gcd, getFactors, lcm } from './factorUtils.js';
 import {
     createDecimalValue,
     compareDecimalOrder,
@@ -14,7 +15,7 @@ import {
 } from './decimalUtils.js';
 
 test('all categories expose units and helpers resolve category / unit ids', () => {
-    assert.ok(categories.length >= 7);
+    assert.ok(categories.length >= 8);
     assert.ok(categories.every((category) => Array.isArray(category.units) && category.units.length > 0));
 
     const fractions = getCategoryById('fractions');
@@ -23,6 +24,8 @@ test('all categories expose units and helpers resolve category / unit ids', () =
     const decimalIntroUnit = getUnitById('decimals', 'decimal_introduction');
     const arithmetic = getCategoryById('arithmetic');
     const arithmeticUnit = getUnitById('arithmetic', 'integer_order_of_operations');
+    const factorsMultiples = getCategoryById('factors_multiples');
+    const findFactorsUnit = getUnitById('factors_multiples', 'find_factors');
 
     assert.equal(fractions?.name, '分數');
     assert.equal(mixedFractionUnit?.name, '帶分數');
@@ -30,6 +33,174 @@ test('all categories expose units and helpers resolve category / unit ids', () =
     assert.equal(decimalIntroUnit?.name, '認識小數');
     assert.equal(arithmetic?.name, '四則運算');
     assert.equal(arithmeticUnit?.name, '基礎整數運算');
+    assert.equal(factorsMultiples?.name, '因數與倍數');
+    assert.equal(findFactorsUnit?.name, '找因數');
+});
+
+test('find factors unit emits every practice type with bounded, correct answers', () => {
+    const unit = getUnitById('factors_multiples', 'find_factors');
+    const seenPromptTypes = new Set();
+
+    for (let index = 0; index < 800; index += 1) {
+        const question = unit.generateQuestion();
+        const { meta } = question;
+
+        seenPromptTypes.add(meta.promptType);
+        assert.ok(meta.target >= 2 && meta.target <= 100);
+        assert.deepEqual(meta.factors, getFactors(meta.target));
+
+        if (meta.promptType === 'factor-recognition') {
+            const optionValues = question.options.map((option) => Number(option.value));
+            const correctOptions = optionValues.filter((value) => meta.target % value === 0);
+
+            assert.equal(question.inputMode, 'choice');
+            assert.equal(question.options.length, 4);
+            assert.equal(new Set(optionValues).size, 4);
+            assert.deepEqual(correctOptions, [meta.correctFactor]);
+            assert.equal(question.evaluate(String(meta.correctFactor)).isCorrect, true);
+        }
+
+        if (meta.promptType === 'factor-pair-completion') {
+            assert.equal(question.inputMode, 'fields');
+            assert.ok(meta.factorPairs.length >= 2 && meta.factorPairs.length <= 5);
+            assert.ok(meta.factorPairs.every(([left, right]) => left <= right));
+            assert.ok(meta.factorPairs.every(([left, right]) => left * right === meta.target));
+            assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
+
+            const wrongInput = {
+                ...meta.correctInput,
+                pair0: String(Number(meta.correctInput.pair0) + 1)
+            };
+            assert.equal(question.evaluate(wrongInput).isCorrect, false);
+        }
+
+        if (meta.promptType === 'factor-list') {
+            assert.equal(question.inputMode, 'fields');
+            assert.ok(meta.factors.length >= 3 && meta.factors.length <= 10);
+            assert.equal(question.fields.length, meta.factors.length);
+            assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
+
+            const wrongInput = {
+                ...meta.correctInput,
+                factor0: String(Number(meta.correctInput.factor0) + 1)
+            };
+            assert.equal(question.evaluate(wrongInput).isCorrect, false);
+        }
+    }
+
+    assert.deepEqual(
+        [...seenPromptTypes].sort(),
+        ['factor-list', 'factor-pair-completion', 'factor-recognition'].sort()
+    );
+});
+
+test('common factors unit lists shared factors and greatest common factors within grade-five bounds', () => {
+    const unit = getUnitById('factors_multiples', 'common_factors');
+    const seenPromptTypes = new Set();
+    const seenGreatestCommonFactors = new Set();
+
+    for (let index = 0; index < 800; index += 1) {
+        const question = unit.generateQuestion();
+        const { meta } = question;
+        const expectedGreatestCommonFactor = gcd(meta.left, meta.right);
+
+        seenPromptTypes.add(meta.promptType);
+        seenGreatestCommonFactors.add(meta.greatestCommonFactor === 1 ? 'only-one' : 'non-trivial');
+
+        assert.ok(meta.left >= 6 && meta.left <= 60);
+        assert.ok(meta.right >= 6 && meta.right <= 60);
+        assert.notEqual(meta.left, meta.right);
+        assert.equal(meta.greatestCommonFactor, expectedGreatestCommonFactor);
+        assert.deepEqual(meta.commonFactors, getFactors(expectedGreatestCommonFactor));
+        assert.doesNotMatch(question.text, /互質|短除法|質因數/);
+
+        if (meta.promptType === 'common-factor-list') {
+            assert.equal(question.inputMode, 'fields');
+            assert.equal(question.fields.length, meta.commonFactors.length);
+            assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
+
+            const wrongInput = {
+                ...meta.correctInput,
+                commonFactor0: String(Number(meta.correctInput.commonFactor0) + 1)
+            };
+            assert.equal(question.evaluate(wrongInput).isCorrect, false);
+        }
+
+        if (meta.promptType === 'greatest-common-factor') {
+            assert.equal(question.inputMode, 'number');
+            assert.equal(question.evaluate(String(meta.greatestCommonFactor)).isCorrect, true);
+            assert.equal(question.evaluate(String(meta.greatestCommonFactor + 1)).isCorrect, false);
+        }
+    }
+
+    assert.deepEqual(
+        [...seenPromptTypes].sort(),
+        ['common-factor-list', 'greatest-common-factor'].sort()
+    );
+    assert.deepEqual([...seenGreatestCommonFactors].sort(), ['non-trivial', 'only-one'].sort());
+});
+
+test('common multiples unit compares positive multiple sequences within grade-five bounds', () => {
+    const unit = getUnitById('factors_multiples', 'common_multiples');
+    const seenPromptTypes = new Set();
+    const seenPairKinds = new Set();
+
+    for (let index = 0; index < 800; index += 1) {
+        const question = unit.generateQuestion();
+        const { meta } = question;
+        const expectedLeastCommonMultiple = lcm(meta.left, meta.right);
+
+        seenPromptTypes.add(meta.promptType);
+        seenPairKinds.add(meta.isDividingPair ? 'dividing' : 'non-dividing');
+
+        assert.ok(meta.left >= 2 && meta.left <= 12);
+        assert.ok(meta.right >= 2 && meta.right <= 12);
+        assert.notEqual(meta.left, meta.right);
+        assert.equal(meta.leastCommonMultiple, expectedLeastCommonMultiple);
+        assert.ok(meta.leastCommonMultiple > 0 && meta.leastCommonMultiple <= 120);
+        assert.deepEqual(meta.commonMultiples, [
+            meta.leastCommonMultiple,
+            meta.leastCommonMultiple * 2
+        ]);
+        assert.ok(meta.commonMultiples.every((value) => value > 0));
+        assert.doesNotMatch(question.text, /短除法|質因數|互質/);
+
+        if (meta.promptType === 'common-multiple-choice') {
+            const optionValues = question.options.map((option) => Number(option.value));
+            const correctOptions = optionValues.filter(
+                (value) => value % meta.left === 0 && value % meta.right === 0
+            );
+
+            assert.equal(question.inputMode, 'choice');
+            assert.equal(question.options.length, 4);
+            assert.equal(new Set(optionValues).size, 4);
+            assert.deepEqual(correctOptions, [meta.correctMultiple]);
+            assert.equal(question.evaluate(String(meta.correctMultiple)).isCorrect, true);
+        }
+
+        if (meta.promptType === 'common-multiple-sequence') {
+            assert.equal(question.inputMode, 'fields');
+            assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
+
+            const wrongInput = {
+                ...meta.correctInput,
+                secondCommonMultiple: String(Number(meta.correctInput.secondCommonMultiple) + 1)
+            };
+            assert.equal(question.evaluate(wrongInput).isCorrect, false);
+        }
+
+        if (meta.promptType === 'least-common-multiple') {
+            assert.equal(question.inputMode, 'number');
+            assert.equal(question.evaluate(String(meta.leastCommonMultiple)).isCorrect, true);
+            assert.equal(question.evaluate(String(meta.leastCommonMultiple + 1)).isCorrect, false);
+        }
+    }
+
+    assert.deepEqual(
+        [...seenPromptTypes].sort(),
+        ['common-multiple-choice', 'common-multiple-sequence', 'least-common-multiple'].sort()
+    );
+    assert.deepEqual([...seenPairKinds].sort(), ['dividing', 'non-dividing'].sort());
 });
 
 test('fraction category unit input modes match the plan requirements', () => {

@@ -1,13 +1,6 @@
-export const gcd = (left, right) => {
-    let a = Math.abs(left);
-    let b = Math.abs(right);
+import { gcd } from './factorUtils.js';
 
-    while (b !== 0) {
-        [a, b] = [b, a % b];
-    }
-
-    return a || 1;
-};
+export { gcd };
 
 export const createFractionValue = (numerator, denominator = 1) => {
     if (!Number.isInteger(numerator) || !Number.isInteger(denominator) || denominator === 0) {

@@ -1,6 +1,6 @@
 # Math Practice Platform (MathP) 🐘
 
-一個為小學生設計的數學練習平台，現在採用 `分類 → 單元 → 題數 → 作答 → 結果` 的固定流程，支援數字輸入、分數輸入、小數輸入、多欄填空與選擇題作答模式。題庫已內建基礎加減法、九九乘法、概數、分數、小數與四則運算單元。
+一個為小學生設計的數學練習平台，現在採用 `分類 → 單元 → 題數 → 作答 → 結果` 的固定流程，支援數字輸入、分數輸入、小數輸入、多欄填空與選擇題作答模式。題庫已內建基礎加減法、九九乘法、因數與倍數、概數、分數、小數與四則運算單元。
 
 ## 核心功能
 
@@ -10,6 +10,7 @@
 - 分數輸入支援整數 `n`、分數 `a/b`、帶分數 `w a/b`
 - 小數輸入使用精確十進位模型判分，接受等值尾端 `0`，例如 `4.560` 等於 `4.56`
 - 概數單元只會出 `百位 / 千位 / 萬位` 與三種取概數方法的組合
+- 因數與倍數依五年級程度使用列舉法，練習因數配對、公因數、公倍數及最大最小關係
 
 ## 技術棧
 
@@ -91,6 +92,18 @@ pnpm build
 - `createDecimalQuestion(...)`
 - `createFieldQuestion(...)`
 
+## 因數與倍數規則
+
+整數因數工具位於 [src/game/factorUtils.js](/Users/sero/dev/sero/mathp/src/game/factorUtils.js)。
+
+目前支援：
+
+- `找因數` 混合因數辨認、完整因數配對與由小到大列出全部因數，目標數不超過 `100`
+- `公因數與最大公因數` 只處理 `6 ~ 60` 的兩個相異正整數，包含共同因數只有 `1` 的特例
+- `公倍數與最小公倍數` 使用 `2 ~ 12` 的兩個相異正整數，最小公倍數不超過 `120`
+- 倍數從第一個正倍數開始，不把 `0` 放進題目
+- 全部題目以列舉與整數乘除關係為主，不使用短除法、質因數分解或「互質」術語
+
 ## 分數規則
 
 分數工具位於 [src/game/fractionUtils.js](/Users/sero/dev/sero/mathp/src/game/fractionUtils.js)。
@@ -165,9 +178,10 @@ pnpm build
 
 ## 測試覆蓋
 
-目前測試位於 [src/game/categories.test.js](/Users/sero/dev/sero/mathp/src/game/categories.test.js)、[src/game/fractionUtils.test.js](/Users/sero/dev/sero/mathp/src/game/fractionUtils.test.js)、[src/game/decimalUtils.test.js](/Users/sero/dev/sero/mathp/src/game/decimalUtils.test.js)、[src/game/questionFactories.test.js](/Users/sero/dev/sero/mathp/src/game/questionFactories.test.js)、[src/game/session.test.js](/Users/sero/dev/sero/mathp/src/game/session.test.js)，覆蓋：
+目前測試位於 [src/game/categories.test.js](/Users/sero/dev/sero/mathp/src/game/categories.test.js)、[src/game/factorUtils.test.js](/Users/sero/dev/sero/mathp/src/game/factorUtils.test.js)、[src/game/fractionUtils.test.js](/Users/sero/dev/sero/mathp/src/game/fractionUtils.test.js)、[src/game/decimalUtils.test.js](/Users/sero/dev/sero/mathp/src/game/decimalUtils.test.js)、[src/game/questionFactories.test.js](/Users/sero/dev/sero/mathp/src/game/questionFactories.test.js)、[src/game/session.test.js](/Users/sero/dev/sero/mathp/src/game/session.test.js)，覆蓋：
 
 - category / unit schema 與 helper 查找
+- 因數、倍數、最大公因數、最小公倍數工具與三個單元的 generator 範圍
 - 概數 generator 只出指定位數與方法
 - 分數解析、格式驗證、等值判定
 - 小數解析、格式驗證、精確運算、等值判定
@@ -180,6 +194,9 @@ pnpm build
 - 基礎加法 / `10 以內加法`
 - 基礎減法 / `10 以內減法`
 - 九九乘法 / `1 到 9 乘法表`
+- 因數與倍數 / `找因數`
+- 因數與倍數 / `公因數與最大公因數`
+- 因數與倍數 / `公倍數與最小公倍數`
 - 概數 / `百位到萬位概數`
 - 分數 / `真分數`
 - 分數 / `假分數`

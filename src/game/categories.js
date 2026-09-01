@@ -10,11 +10,11 @@ import {
 } from './decimalUtils.js';
 import {
     compareFractionValues,
-    gcd,
     createFractionValue,
     formatFractionValue,
     formatFractionValueWithOriginalDenominator
 } from './fractionUtils.js';
+import { gcd, getFactors, getMultiples, lcm } from './factorUtils.js';
 import {
     createBinaryNode,
     createGroupNode,
@@ -51,8 +51,6 @@ const DECIMAL_PLACE_VALUES = [
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const pickRandom = (items) => items[randomInt(0, items.length - 1)];
-
-const lcm = (left, right) => Math.abs(left * right) / gcd(left, right);
 
 const shuffle = (items) => {
     const next = [...items];
@@ -940,6 +938,323 @@ const createFractionAddSubUnlikeQuestion = () => {
     });
 };
 
+const FACTOR_PRACTICE_TARGETS = Array.from({ length: 97 }, (_, index) => index + 4)
+    .filter((value) => {
+        const factorCount = getFactors(value).length;
+        return factorCount >= 3 && factorCount <= 10;
+    });
+
+const createFactorRecognitionQuestion = () => {
+    const target = pickRandom(FACTOR_PRACTICE_TARGETS);
+    const factors = getFactors(target);
+    const correctFactor = pickRandom(factors.slice(1, -1));
+    const distractorPool = Array.from(
+        { length: Math.max(target, 12) - 1 },
+        (_, index) => index + 2
+    ).filter((candidate) => target % candidate !== 0);
+    const distractors = shuffle(distractorPool).slice(0, 3);
+    const options = shuffle([correctFactor, ...distractors])
+        .map((value) => ({ value: String(value), label: String(value) }));
+
+    return createChoiceQuestion({
+        text: `下面哪一個數是 ${target} 的因數？`,
+        options,
+        correctValue: String(correctFactor),
+        meta: {
+            promptType: 'factor-recognition',
+            target,
+            factors,
+            correctFactor
+        }
+    });
+};
+
+const createFactorPairCompletionQuestion = () => {
+    const target = pickRandom(FACTOR_PRACTICE_TARGETS);
+    const factors = getFactors(target);
+    const factorPairs = factors
+        .filter((factor) => factor <= target / factor)
+        .map((factor) => [factor, target / factor]);
+    const correctInput = Object.fromEntries(
+        factorPairs.map(([, pairedFactor], index) => [`pair${index}`, String(pairedFactor)])
+    );
+
+    return createFieldQuestion({
+        text: `完成 ${target} 的所有因數配對，每格填入右邊的因數。`,
+        fields: factorPairs.map(([factor, pairedFactor], index) =>
+            createIntegerField({
+                id: `pair${index}`,
+                label: `${factor} × □ = ${target}`,
+                expectedValue: pairedFactor
+            })
+        ),
+        meta: {
+            promptType: 'factor-pair-completion',
+            target,
+            factors,
+            factorPairs,
+            correctInput
+        }
+    });
+};
+
+const createFactorListQuestion = () => {
+    const target = pickRandom(FACTOR_PRACTICE_TARGETS);
+    const factors = getFactors(target);
+    const correctInput = Object.fromEntries(
+        factors.map((factor, index) => [`factor${index}`, String(factor)])
+    );
+
+    return createFieldQuestion({
+        text: `依照由小到大的順序，填出 ${target} 的所有因數。`,
+        fields: factors.map((factor, index) =>
+            createIntegerField({
+                id: `factor${index}`,
+                label: `第 ${index + 1} 個因數`,
+                expectedValue: factor
+            })
+        ),
+        meta: {
+            promptType: 'factor-list',
+            target,
+            factors,
+            correctInput
+        }
+    });
+};
+
+const createFindFactorsQuestion = () => {
+    const roll = randomInt(1, 100);
+
+    if (roll <= 20) {
+        return createFactorRecognitionQuestion();
+    }
+
+    if (roll <= 55) {
+        return createFactorPairCompletionQuestion();
+    }
+
+    return createFactorListQuestion();
+};
+
+const createCommonFactorOperands = () => {
+    const shouldHaveNonTrivialCommonFactor = randomInt(1, 100) <= 80;
+    let left;
+    let right;
+    let greatestCommonFactor;
+
+    do {
+        left = randomInt(6, 60);
+        right = randomInt(6, 60);
+        greatestCommonFactor = gcd(left, right);
+    } while (
+        left === right
+        || (shouldHaveNonTrivialCommonFactor
+            ? greatestCommonFactor === 1
+            : greatestCommonFactor !== 1)
+    );
+
+    return {
+        left,
+        right,
+        greatestCommonFactor,
+        commonFactors: getFactors(greatestCommonFactor)
+    };
+};
+
+const createCommonFactorListQuestion = () => {
+    const {
+        left,
+        right,
+        greatestCommonFactor,
+        commonFactors
+    } = createCommonFactorOperands();
+    const correctInput = Object.fromEntries(
+        commonFactors.map((factor, index) => [`commonFactor${index}`, String(factor)])
+    );
+
+    return createFieldQuestion({
+        text: `依照由小到大的順序，填出 ${left} 和 ${right} 的所有公因數。`,
+        fields: commonFactors.map((factor, index) =>
+            createIntegerField({
+                id: `commonFactor${index}`,
+                label: `第 ${index + 1} 個公因數`,
+                expectedValue: factor
+            })
+        ),
+        meta: {
+            promptType: 'common-factor-list',
+            left,
+            right,
+            commonFactors,
+            greatestCommonFactor,
+            correctInput
+        }
+    });
+};
+
+const createGreatestCommonFactorQuestion = () => {
+    const {
+        left,
+        right,
+        greatestCommonFactor,
+        commonFactors
+    } = createCommonFactorOperands();
+
+    return createNumberQuestion({
+        text: `${left} 和 ${right} 的最大公因數是多少？`,
+        answer: greatestCommonFactor,
+        meta: {
+            promptType: 'greatest-common-factor',
+            left,
+            right,
+            commonFactors,
+            greatestCommonFactor
+        }
+    });
+};
+
+const createCommonFactorsQuestion = () =>
+    randomInt(1, 100) <= 40
+        ? createCommonFactorListQuestion()
+        : createGreatestCommonFactorQuestion();
+
+const createCommonMultipleOperands = () => {
+    const shouldBeDividingPair = randomInt(1, 100) > 75;
+    let left;
+    let right;
+    let leastCommonMultiple;
+    let isDividingPair;
+
+    do {
+        left = randomInt(2, 12);
+        right = randomInt(2, 12);
+        leastCommonMultiple = lcm(left, right);
+        isDividingPair = Math.max(left, right) % Math.min(left, right) === 0;
+    } while (
+        left === right
+        || leastCommonMultiple > 120
+        || isDividingPair !== shouldBeDividingPair
+    );
+
+    return {
+        left,
+        right,
+        leastCommonMultiple,
+        isDividingPair,
+        commonMultiples: getMultiples(leastCommonMultiple, 2)
+    };
+};
+
+const createCommonMultipleChoiceQuestion = () => {
+    const {
+        left,
+        right,
+        leastCommonMultiple,
+        isDividingPair,
+        commonMultiples
+    } = createCommonMultipleOperands();
+    const correctMultiple = leastCommonMultiple * randomInt(1, 2);
+    const distractorPool = [...new Set([
+        ...getMultiples(left, 12),
+        ...getMultiples(right, 12)
+    ])].filter((candidate) => candidate % left !== 0 || candidate % right !== 0);
+    const distractors = shuffle(distractorPool).slice(0, 3);
+    const options = shuffle([correctMultiple, ...distractors])
+        .map((value) => ({ value: String(value), label: String(value) }));
+
+    return createChoiceQuestion({
+        text: `下面哪一個數是 ${left} 和 ${right} 的公倍數？`,
+        options,
+        correctValue: String(correctMultiple),
+        meta: {
+            promptType: 'common-multiple-choice',
+            left,
+            right,
+            leastCommonMultiple,
+            isDividingPair,
+            commonMultiples,
+            correctMultiple
+        }
+    });
+};
+
+const createCommonMultipleSequenceQuestion = () => {
+    const {
+        left,
+        right,
+        leastCommonMultiple,
+        isDividingPair,
+        commonMultiples
+    } = createCommonMultipleOperands();
+    const correctInput = {
+        firstCommonMultiple: String(commonMultiples[0]),
+        secondCommonMultiple: String(commonMultiples[1])
+    };
+
+    return createFieldQuestion({
+        text: `依照由小到大的順序，填出 ${left} 和 ${right} 的前兩個正公倍數。`,
+        fields: [
+            createIntegerField({
+                id: 'firstCommonMultiple',
+                label: '第 1 個公倍數',
+                expectedValue: commonMultiples[0]
+            }),
+            createIntegerField({
+                id: 'secondCommonMultiple',
+                label: '第 2 個公倍數',
+                expectedValue: commonMultiples[1]
+            })
+        ],
+        meta: {
+            promptType: 'common-multiple-sequence',
+            left,
+            right,
+            leastCommonMultiple,
+            isDividingPair,
+            commonMultiples,
+            correctInput
+        }
+    });
+};
+
+const createLeastCommonMultipleQuestion = () => {
+    const {
+        left,
+        right,
+        leastCommonMultiple,
+        isDividingPair,
+        commonMultiples
+    } = createCommonMultipleOperands();
+
+    return createNumberQuestion({
+        text: `${left} 和 ${right} 的最小公倍數是多少？`,
+        answer: leastCommonMultiple,
+        meta: {
+            promptType: 'least-common-multiple',
+            left,
+            right,
+            leastCommonMultiple,
+            isDividingPair,
+            commonMultiples
+        }
+    });
+};
+
+const createCommonMultiplesQuestion = () => {
+    const roll = randomInt(1, 100);
+
+    if (roll <= 25) {
+        return createCommonMultipleChoiceQuestion();
+    }
+
+    if (roll <= 55) {
+        return createCommonMultipleSequenceQuestion();
+    }
+
+    return createLeastCommonMultipleQuestion();
+};
+
 const createAdditionUnit = () => ({
     id: 'within_10',
     name: '10 以內加法',
@@ -983,6 +1298,27 @@ const createMultiplicationUnit = () => ({
             answer: a * b
         });
     }
+});
+
+const createFindFactorsUnit = () => ({
+    id: 'find_factors',
+    name: '找因數',
+    description: '辨認因數、完成因數配對並依序列出全部因數',
+    generateQuestion: () => createFindFactorsQuestion()
+});
+
+const createCommonFactorsUnit = () => ({
+    id: 'common_factors',
+    name: '公因數與最大公因數',
+    description: '列出兩數的公因數並找出最大公因數',
+    generateQuestion: () => createCommonFactorsQuestion()
+});
+
+const createCommonMultiplesUnit = () => ({
+    id: 'common_multiples',
+    name: '公倍數與最小公倍數',
+    description: '比較兩組正倍數並找出最小公倍數',
+    generateQuestion: () => createCommonMultiplesQuestion()
 });
 
 const createApproximationUnit = () => ({
@@ -1461,6 +1797,18 @@ export const categories = [
         icon: '🚀',
         color: '#fccb90',
         units: [createMultiplicationUnit()]
+    },
+    {
+        id: 'factors_multiples',
+        name: '因數與倍數',
+        description: '找因數、公因數、公倍數與最大最小關係',
+        icon: '🔗',
+        color: '#e17055',
+        units: [
+            createFindFactorsUnit(),
+            createCommonFactorsUnit(),
+            createCommonMultiplesUnit()
+        ]
     },
     {
         id: 'approximation',
