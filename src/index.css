@@ -7,6 +7,7 @@
   --color-card: #ffffff;
   --color-success: #84fab0;
   --color-warning: #fccb90;
+  --color-placeholder: #757575;
 
   --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 8px 15px rgba(0, 0, 0, 0.1);
@@ -318,6 +319,13 @@ body {
   transition: all 0.2s ease;
   box-sizing: border-box;
   font-family: inherit;
+}
+
+.answer-input::placeholder,
+.field-answer-input::placeholder {
+  color: var(--color-placeholder);
+  font-weight: 500;
+  opacity: 1;
 }
 
 .answer-input.is-correct {
@@ -740,6 +748,12 @@ body {
   border: 2px solid #e17055;
 }
 
+.feedback-next-button {
+  display: block;
+  margin: 16px auto 4px;
+  font-size: 1.05rem;
+}
+
 /* Wrong answer review */
 .wrong-review-item {
   padding: 12px;
@@ -890,6 +904,10 @@ body {
   }
 
   .field-answer-actions .btn {
+    width: 100%;
+  }
+
+  .feedback-next-button {
     width: 100%;
   }
 }

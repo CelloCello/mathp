@@ -39,6 +39,24 @@ test('session helpers generate questions for a selected category and unit', () =
     });
 });
 
+test('factor and multiple units support every configured session length', () => {
+    const unitIds = ['find_factors', 'common_factors', 'common_multiples'];
+
+    for (const unitId of unitIds) {
+        for (const totalQuestions of [5, 10, 20, 50]) {
+            const questions = createQuestionSet('factors_multiples', unitId, totalQuestions);
+
+            assert.equal(questions.length, totalQuestions);
+            assert.ok(questions.every((question) => typeof question.evaluate === 'function'));
+        }
+    }
+
+    assert.deepEqual(getSelectionLabels('factors_multiples', 'common_multiples'), {
+        categoryName: '因數與倍數',
+        unitName: '公倍數與最小公倍數'
+    });
+});
+
 test('mixed fraction conversion marks equivalent but wrong-format answers as incorrect', () => {
     const unit = getUnitById('fractions', 'mixed_fraction');
     let question = null;

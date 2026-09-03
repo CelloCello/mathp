@@ -3,6 +3,7 @@ import { getCategoryById, getUnitById } from '../game/categories.js';
 import FieldAnswerForm from './FieldAnswerForm.jsx';
 import FractionAnswerForm from './FractionAnswerForm.jsx';
 import MathContent from './MathContent.jsx';
+import { shouldAdvanceFeedbackManually } from './playScreenUtils.js';
 
 const INPUT_MODE_LABELS = {
     choice: '選擇題',
@@ -102,10 +103,17 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
 
         setStats(nextStats);
         setValidationError('');
+        const advancesManually = shouldAdvanceFeedbackManually(currentQuestion, evaluation);
         setFeedback({
             ...evaluation,
-            selectedValue: currentQuestion.inputMode === 'choice' ? rawInput : null
+            selectedValue: currentQuestion.inputMode === 'choice' ? rawInput : null,
+            advancesManually,
+            nextStats
         });
+
+        if (advancesManually) {
+            return;
+        }
 
         const delay = evaluation.isCorrect ? 1000 : 1600;
         timerRef.current = setTimeout(() => {
@@ -278,6 +286,15 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                                 你的答案：<MathContent text={feedback.userAnswerLabel} className="feedback-answer-text" />
                                 {feedback.note ? `｜${feedback.note}` : ''}
                             </p>
+                        )}
+                        {feedback.advancesManually && (
+                            <button
+                                type="button"
+                                className="btn feedback-next-button"
+                                onClick={() => advance(feedback.nextStats)}
+                            >
+                                {currentIdx + 1 < totalQuestions ? '下一題 →' : '查看結果 →'}
+                            </button>
                         )}
                     </div>
                 )}
