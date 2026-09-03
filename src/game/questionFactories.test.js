@@ -64,9 +64,9 @@ test('createFieldQuestion validates object keyed field answers', () => {
     assert.equal(missing.validationError, '請填寫「幾個」。');
 });
 
-test('createFieldQuestion accepts ordered integer lists with common Chinese separators', () => {
+test('createFieldQuestion accepts unordered integer lists with common Chinese separators', () => {
     const question = createFieldQuestion({
-        text: '依照由小到大的順序，填出 12 的所有因數。',
+        text: '填出 12 的所有因數，順序不拘。',
         fields: [
             {
                 id: 'factors',
@@ -79,13 +79,15 @@ test('createFieldQuestion accepts ordered integer lists with common Chinese sepa
     });
 
     const correct = question.evaluate({ factors: '1, 2，3、4 6 12' });
-    const wrongOrder = question.evaluate({ factors: '1, 3, 2, 4, 6, 12' });
+    const spaceSeparated = question.evaluate({ factors: '12 6 4 3 2 1' });
+    const duplicate = question.evaluate({ factors: '1 2 3 4 6 6' });
     const malformed = question.evaluate({ factors: '1, 2, 三, 4, 6, 12' });
 
     assert.equal(correct.isCorrect, true);
     assert.equal(correct.userAnswerLabel, '所有因數: 1、2、3、4、6、12');
     assert.equal(correct.correctAnswerLabel, '所有因數: 1、2、3、4、6、12');
-    assert.equal(wrongOrder.isCorrect, false);
-    assert.equal(wrongOrder.validationError, null);
+    assert.equal(spaceSeparated.isCorrect, true);
+    assert.equal(spaceSeparated.userAnswerLabel, '所有因數: 12、6、4、3、2、1');
+    assert.equal(duplicate.validationError, '「所有因數」請勿重複輸入相同整數。');
     assert.equal(malformed.validationError, '「所有因數」請用逗號、頓號或空格分隔整數。');
 });

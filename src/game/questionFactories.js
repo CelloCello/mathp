@@ -107,12 +107,21 @@ const evaluateFieldAnswer = (field, rawValue) => {
         }
 
         const values = parsedValues.map(Number);
+        const uniqueValues = new Set(values);
+
+        if (uniqueValues.size !== values.length) {
+            return {
+                isValid: false,
+                error: `「${field.label}」請勿重複輸入相同整數。`
+            };
+        }
+
         const expectedValues = field.expectedValues;
 
         return {
             isValid: true,
             isCorrect: values.length === expectedValues.length
-                && values.every((item, index) => item === expectedValues[index]),
+                && expectedValues.every((item) => uniqueValues.has(item)),
             displayLabel: values.join('、')
         };
     }

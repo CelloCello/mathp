@@ -116,6 +116,9 @@ test('find factors unit emits every practice type with bounded, correct answers'
             assert.deepEqual(question.fields[0].expectedValues, meta.factors);
             assert.equal(meta.feedbackAdvance, 'manual-on-wrong');
             assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
+            assert.equal(question.evaluate({
+                factors: [...meta.factors].reverse().join(' ')
+            }).isCorrect, true);
 
             const wrongInput = {
                 ...meta.correctInput,
@@ -151,17 +154,28 @@ test('common factors unit lists shared factors and greatest common factors withi
         assert.deepEqual(meta.commonFactors, listPositiveDivisors(expectedGreatestCommonFactor));
         assert.doesNotMatch(question.text, /互質|短除法|質因數/);
 
-        if (meta.promptType === 'common-factor-list') {
+        if (meta.promptType === 'scaffolded-greatest-common-factor') {
             assert.equal(question.inputMode, 'fields');
-            assert.equal(question.fields.length, 1);
+            assert.equal(question.fields.length, 3);
             assert.equal(question.fields[0].answerKind, 'integer-list');
-            assert.deepEqual(question.fields[0].expectedValues, meta.commonFactors);
+            assert.equal(question.fields[1].answerKind, 'integer-list');
+            assert.equal(question.fields[2].answerKind, 'integer');
+            assert.deepEqual(meta.leftFactors, listPositiveDivisors(meta.left));
+            assert.deepEqual(meta.rightFactors, listPositiveDivisors(meta.right));
+            assert.deepEqual(question.fields[0].expectedValues, meta.leftFactors);
+            assert.deepEqual(question.fields[1].expectedValues, meta.rightFactors);
+            assert.equal(question.fields[2].expectedValue, meta.greatestCommonFactor);
             assert.equal(meta.feedbackAdvance, 'manual-on-wrong');
             assert.equal(question.evaluate(meta.correctInput).isCorrect, true);
+            assert.equal(question.evaluate({
+                ...meta.correctInput,
+                leftFactors: [...meta.leftFactors].reverse().join(' '),
+                rightFactors: [...meta.rightFactors].reverse().join(' ')
+            }).isCorrect, true);
 
             const wrongInput = {
                 ...meta.correctInput,
-                commonFactors: `${meta.correctInput.commonFactors}, ${Math.min(meta.left, meta.right) + 1}`
+                greatestCommonFactor: String(meta.greatestCommonFactor + 1)
             };
             assert.equal(question.evaluate(wrongInput).isCorrect, false);
         }
@@ -175,7 +189,7 @@ test('common factors unit lists shared factors and greatest common factors withi
 
     assert.deepEqual(
         [...seenPromptTypes].sort(),
-        ['common-factor-list', 'greatest-common-factor'].sort()
+        ['greatest-common-factor', 'scaffolded-greatest-common-factor'].sort()
     );
     assert.deepEqual([...seenGreatestCommonFactors].sort(), ['non-trivial', 'only-one'].sort());
 });

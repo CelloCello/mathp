@@ -172,7 +172,7 @@ const createIntegerListField = ({ id, label, expectedValues }) => ({
     expectedValues,
     displayValue: expectedValues.join('、'),
     inputMode: 'text',
-    placeholder: '例如：1, 2, 3, 6'
+    placeholder: '例如：1 2 3 6（也可用逗號）'
 });
 
 const createNumericInputField = ({ id, label, fractionPairId = null }) => ({
@@ -1015,7 +1015,7 @@ const createFactorListQuestion = () => {
     const correctInput = { factors: factors.join(', ') };
 
     return createFieldQuestion({
-        text: `依照由小到大的順序，填出 ${target} 的所有因數。`,
+        text: `填出 ${target} 的所有因數，順序不拘。`,
         fields: [createIntegerListField({
             id: 'factors',
             label: '所有因數',
@@ -1070,27 +1070,47 @@ const createCommonFactorOperands = () => {
     };
 };
 
-const createCommonFactorListQuestion = () => {
+const createScaffoldedGreatestCommonFactorQuestion = () => {
     const {
         left,
         right,
         greatestCommonFactor,
         commonFactors
     } = createCommonFactorOperands();
-    const correctInput = { commonFactors: commonFactors.join(', ') };
+    const leftFactors = getFactors(left);
+    const rightFactors = getFactors(right);
+    const correctInput = {
+        leftFactors: leftFactors.join(', '),
+        rightFactors: rightFactors.join(', '),
+        greatestCommonFactor: String(greatestCommonFactor)
+    };
 
     return createFieldQuestion({
-        text: `依照由小到大的順序，填出 ${left} 和 ${right} 的所有公因數。`,
-        fields: [createIntegerListField({
-            id: 'commonFactors',
-            label: '所有公因數',
-            expectedValues: commonFactors
-        })],
+        text: `先列出 ${left} 和 ${right} 的所有因數，再找出最大公因數。`,
+        fields: [
+            createIntegerListField({
+                id: 'leftFactors',
+                label: `${left} 的所有因數`,
+                expectedValues: leftFactors
+            }),
+            createIntegerListField({
+                id: 'rightFactors',
+                label: `${right} 的所有因數`,
+                expectedValues: rightFactors
+            }),
+            createIntegerField({
+                id: 'greatestCommonFactor',
+                label: '最大公因數',
+                expectedValue: greatestCommonFactor
+            })
+        ],
         meta: {
-            promptType: 'common-factor-list',
+            promptType: 'scaffolded-greatest-common-factor',
             feedbackAdvance: 'manual-on-wrong',
             left,
             right,
+            leftFactors,
+            rightFactors,
             commonFactors,
             greatestCommonFactor,
             correctInput
@@ -1120,8 +1140,8 @@ const createGreatestCommonFactorQuestion = () => {
 };
 
 const createCommonFactorsQuestion = () =>
-    randomInt(1, 100) <= 40
-        ? createCommonFactorListQuestion()
+    randomInt(1, 100) <= 70
+        ? createScaffoldedGreatestCommonFactorQuestion()
         : createGreatestCommonFactorQuestion();
 
 const createCommonMultipleOperands = () => {
