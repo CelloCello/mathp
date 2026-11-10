@@ -4,7 +4,7 @@ import { expressionToTex } from '../game/expressionUtils.js';
 
 const CORE_NUMBER_PATTERN = /\d+\s+\d+\/\d+|[△□]\/\d+|\d+\/\d+|\d+\.\d+|\d+/g;
 const MATH_CONTEXT_PATTERN = /[0-9.+\-×÷=(){}\[\]＋－（）［］｛｝?？△□\/\s]/;
-const TOKEN_PATTERN = /\d+\s+\d+\/\d+|[△□]\/\d+|\d+\/\d+|\d+\.\d+|\d+|[+\-×÷=(){}\[\]?]/g;
+const TOKEN_PATTERN = /\d+\s+\d+\/\d+|[△□]\/\d+|\d+\/\d+|\d+\.\d+|\d+|[△□+\-×÷=(){}\[\]?]/g;
 const OPENING_PATTERN = /^[([{]$/;
 const CLOSING_PATTERN = /^[)\]}]$/;
 const SYMBOL_NUMERATOR_TEX = {
@@ -39,6 +39,9 @@ const needsTightSpacing = (previous, current) => (
 );
 
 const tokenToMathPiece = (token) => {
+    if (token === '△' || token === '□') {
+        return { type: 'atom', tex: SYMBOL_NUMERATOR_TEX[token] };
+    }
     const mixedMatch = token.match(/^(\d+)\s+(\d+)\/(\d+)$/);
 
     if (mixedMatch) {

@@ -3,6 +3,7 @@ import { getCategoryById, getUnitById } from '../game/categories.js';
 import FieldAnswerForm from './FieldAnswerForm.jsx';
 import FractionAnswerForm from './FractionAnswerForm.jsx';
 import MathContent from './MathContent.jsx';
+import GeometryDiagram from './GeometryDiagram.jsx';
 import { shouldAdvanceFeedbackManually } from './playScreenUtils.js';
 
 const INPUT_MODE_LABELS = {
@@ -195,7 +196,8 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                                 : 'clamp(1.3rem, 4.5vw, 1.8rem)',
                         margin: 0,
                         lineHeight: 1.4,
-                        wordBreak: 'keep-all'
+                        wordBreak: 'normal',
+                        overflowWrap: 'anywhere'
                     }}>
                         <MathContent
                             text={currentQuestion.text}
@@ -203,6 +205,7 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                             mathModel={currentQuestion.meta?.mathModel}
                         />
                     </h2>
+                    <GeometryDiagram diagram={currentQuestion.meta?.diagram} />
                 </div>
 
                 {currentQuestion.inputMode === 'choice' ? (
@@ -286,6 +289,9 @@ function PlayScreen({ categoryId, unitId, questions, onFinish, onGoHome, onResta
                                 你的答案：<MathContent text={feedback.userAnswerLabel} className="feedback-answer-text" />
                                 {feedback.note ? `｜${feedback.note}` : ''}
                             </p>
+                        )}
+                        {!feedback.isCorrect && currentQuestion.meta?.explanation && (
+                            <p className="practice-explanation"><MathContent text={currentQuestion.meta.explanation} /></p>
                         )}
                         {feedback.advancesManually && (
                             <button

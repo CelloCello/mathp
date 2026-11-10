@@ -65,7 +65,7 @@ test('all categories expose units and helpers resolve category / unit ids', () =
     assert.equal(decimals?.name, '小數');
     assert.equal(decimalIntroUnit?.name, '認識小數');
     assert.equal(arithmetic?.name, '四則運算');
-    assert.equal(arithmeticUnit?.name, '基礎整數運算');
+    assert.equal(arithmeticUnit?.name, '整數運算順序');
     assert.equal(factorsMultiples?.name, '因數與倍數');
     assert.equal(findFactorsUnit?.name, '找因數');
 });
@@ -272,9 +272,9 @@ test('fraction category unit input modes match the plan requirements', () => {
     assert.equal(mixed.generateQuestion().inputMode, 'fraction');
     assert.equal(equivalent.generateQuestion().inputMode, 'fields');
     assert.equal(integerMultiple.generateQuestion().inputMode, 'fraction');
-    assert.equal(addSub.name, '分數加減 (1)');
+    assert.equal(addSub.name, '同分母分數加減');
     assert.equal(addSub.generateQuestion().inputMode, 'fraction');
-    assert.equal(addSubUnlike.name, '分數加減 (2)');
+    assert.equal(addSubUnlike.name, '異分母通分練習');
     assert.equal(addSubUnlike.generateQuestion().inputMode, 'fields');
 });
 

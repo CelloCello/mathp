@@ -8,10 +8,108 @@
   --color-success: #84fab0;
   --color-warning: #fccb90;
   --color-placeholder: #757575;
+  --color-diagram: #296657;
+  --color-diagram-fill: #edf5f0;
+  --color-diagram-axis: #9a492c;
+  --color-diagram-grid: #b8c6c0;
 
   --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 8px 15px rgba(0, 0, 0, 0.1);
   --border-radius: 20px;
+}
+
+.geometry-diagram {
+  width: 100%;
+  max-width: 440px;
+  margin: 20px auto 0;
+  color: var(--color-text);
+}
+
+.geometry-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.geometry-diagram figcaption,
+.practice-session-hint {
+  color: #626262;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.geometry-label {
+  fill: var(--color-text);
+  stroke: var(--color-card);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: inherit;
+}
+
+.geometry-shape {
+  fill: var(--color-diagram-fill);
+  stroke: var(--color-diagram);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+}
+
+.geometry-extension {
+  stroke: var(--color-diagram-grid);
+  stroke-width: 1px;
+  stroke-dasharray: 4 4;
+}
+
+.geometry-height,
+.geometry-axis {
+  stroke: var(--color-diagram-axis);
+  stroke-width: 2.5px;
+  stroke-dasharray: 7 5;
+}
+
+.geometry-right-angle {
+  fill: none;
+  stroke: var(--color-diagram-axis);
+  stroke-width: 2px;
+}
+
+.geometry-label-leader {
+  stroke: var(--color-text);
+  stroke-width: 1px;
+}
+
+.geometry-label-leader circle {
+  fill: var(--color-text);
+  stroke: none;
+}
+
+.geometry-grid {
+  stroke: var(--color-diagram-grid);
+  stroke-width: 1px;
+}
+
+.geometry-original-point {
+  fill: var(--color-diagram-axis);
+}
+
+.geometry-candidate-point {
+  fill: var(--color-diagram);
+}
+
+.practice-explanation {
+  margin-top: 16px;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.wrong-review .geometry-diagram {
+  max-width: 360px;
+  margin-bottom: 20px;
 }
 
 * {

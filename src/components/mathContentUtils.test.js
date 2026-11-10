@@ -63,3 +63,12 @@ test('createExpressionPromptTex renders expression models with prompt suffix', (
 
     assert.equal(createExpressionPromptTex(expression, '6÷2(1+2) = ?'), '6 \\div 2(1 + 2) = ?');
 });
+
+test('distributive prompts keep standalone blanks when converting their full equations', () => {
+    assert.equal(convertMathSegmentToTex('18 × 6 - 18 × 2 = 18 × □'),
+        '18 \\times 6 - 18 \\times 2 = 18 \\times \\square');
+    assert.equal(convertMathSegmentToTex('7 × (10 + 4) = 7 × 10 + 7 × □'),
+        '7 \\times (10 + 4) = 7 \\times 10 + 7 \\times \\square');
+    assert.equal(tokenizeMathContent('18 × 6 - 18 × 2 = 18 × □')[0].tex,
+        '18 \\times 6 - 18 \\times 2 = 18 \\times \\square');
+});

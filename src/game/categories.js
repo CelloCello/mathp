@@ -15,6 +15,15 @@ import {
     formatFractionValueWithOriginalDenominator
 } from './fractionUtils.js';
 import { gcd, getFactors, getMultiples, lcm } from './factorUtils.js';
+import { createPracticeUnit } from './practiceUtils.js';
+import {
+    createScaffoldedOperands,
+    createIndependentFractionUnit,
+    createMixedFractionPracticeUnit,
+    createFractionStoryUnit
+} from './gradeFiveFractions.js';
+import { createMultiStepUnit, createDistributiveUnit, createAverageUnit } from './gradeFiveArithmetic.js';
+import { createAreaUnit, createAreaReviewUnit, createSymmetryUnit } from './geometryQuestions.js';
 import {
     createBinaryNode,
     createGroupNode,
@@ -869,55 +878,14 @@ const createFractionAddSubQuestion = () => {
     });
 };
 
-const createUnlikeProperFractionOperands = (operator) => {
-    let leftOperand;
-    let rightOperand;
-    let commonDenominator;
-    let leftEquivalentNumerator;
-    let rightEquivalentNumerator;
-
-    do {
-        const leftDenominator = randomInt(2, 12);
-        let rightDenominator;
-
-        do {
-            rightDenominator = randomInt(2, 12);
-        } while (rightDenominator === leftDenominator);
-
-        commonDenominator = lcm(leftDenominator, rightDenominator);
-        leftOperand = createFractionOperand(randomInt(1, leftDenominator - 1), leftDenominator);
-        rightOperand = createFractionOperand(randomInt(1, rightDenominator - 1), rightDenominator);
-        leftEquivalentNumerator = leftOperand.totalNumerator * (commonDenominator / leftOperand.denominator);
-        rightEquivalentNumerator = rightOperand.totalNumerator * (commonDenominator / rightOperand.denominator);
-
-        if (operator === '-' && leftEquivalentNumerator < rightEquivalentNumerator) {
-            [leftOperand, rightOperand] = [rightOperand, leftOperand];
-            [leftEquivalentNumerator, rightEquivalentNumerator] = [rightEquivalentNumerator, leftEquivalentNumerator];
-        }
-    } while (
-        commonDenominator > 60
-        || (operator === '+' && leftEquivalentNumerator + rightEquivalentNumerator >= commonDenominator)
-        || (operator === '-' && leftEquivalentNumerator === rightEquivalentNumerator)
-    );
-
-    return {
-        leftOperand,
-        rightOperand,
-        commonDenominator,
-        leftEquivalentNumerator,
-        rightEquivalentNumerator
-    };
-};
-
-const createFractionAddSubUnlikeQuestion = () => {
-    const operator = Math.random() < 0.5 ? '+' : '-';
+const createFractionAddSubUnlikeQuestion = (operator, relation) => {
     const {
         leftOperand,
         rightOperand,
         commonDenominator,
         leftEquivalentNumerator,
         rightEquivalentNumerator
-    } = createUnlikeProperFractionOperands(operator);
+    } = createScaffoldedOperands(operator, relation);
     const resultNumerator = operator === '+'
         ? leftEquivalentNumerator + rightEquivalentNumerator
         : leftEquivalentNumerator - rightEquivalentNumerator;
@@ -943,7 +911,8 @@ const createFractionAddSubUnlikeQuestion = () => {
             leftEquivalentNumerator,
             rightEquivalentNumerator,
             resultNumerator,
-            correctInput
+            correctInput,
+            explanation: `先把分母通成 ${commonDenominator}：${leftEquivalentNumerator}/${commonDenominator} ${operator} ${rightEquivalentNumerator}/${commonDenominator} = ${resultNumerator}/${commonDenominator}。`
         }
     });
 };
@@ -1439,16 +1408,21 @@ const createMixedFractionUnit = () => ({
 
 const createFractionAddSubUnit = () => ({
     id: 'fraction_add_subtract',
-    name: '分數加減 (1)',
+    name: '同分母分數加減',
     description: '同分母分數與帶分數的加減法',
     generateQuestion: () => createFractionAddSubQuestion()
 });
 
-const createFractionAddSubUnlikeUnit = () => ({
+const createFractionAddSubUnlikeUnit = () => createPracticeUnit({
     id: 'fraction_add_subtract_unlike',
-    name: '分數加減 (2)',
-    description: '異分母真分數通分後的加減法',
-    generateQuestion: () => createFractionAddSubUnlikeQuestion()
+    name: '異分母通分練習',
+    description: '跟著通分步驟填空，練習異分母真分數加減',
+    variants: [
+        { id: 'multiple-add', weight: 30, level: 1, generate: () => createFractionAddSubUnlikeQuestion('+', 'multiple') },
+        { id: 'multiple-subtract', weight: 30, level: 1, generate: () => createFractionAddSubUnlikeQuestion('-', 'multiple') },
+        { id: 'general-add', weight: 20, level: 2, generate: () => createFractionAddSubUnlikeQuestion('+', 'general') },
+        { id: 'general-subtract', weight: 20, level: 2, generate: () => createFractionAddSubUnlikeQuestion('-', 'general') }
+    ]
 });
 
 const createFractionIntegerMultipleUnit = () => ({
@@ -1769,34 +1743,16 @@ const createNestedBracketsQuestion = () => {
     });
 };
 
-const createIntegerOrderOfOperationsQuestion = () => {
-    const ruleType = pickRandom([
-        'left-to-right',
-        'precedence',
-        'parentheses',
-        'nested-brackets'
-    ]);
-
-    if (ruleType === 'left-to-right') {
-        return createLeftToRightQuestion();
-    }
-
-    if (ruleType === 'precedence') {
-        return createPrecedenceQuestion();
-    }
-
-    if (ruleType === 'parentheses') {
-        return createParenthesesQuestion();
-    }
-
-    return createNestedBracketsQuestion();
-};
-
-const createArithmeticUnit = () => ({
+const createArithmeticUnit = () => createPracticeUnit({
     id: 'integer_order_of_operations',
-    name: '基礎整數運算',
+    name: '整數運算順序',
     description: '整數四則、括號與運算順序',
-    generateQuestion: () => createIntegerOrderOfOperationsQuestion()
+    variants: [
+        { id: 'left-to-right', weight: 30, level: 1, generate: createLeftToRightQuestion },
+        { id: 'precedence', weight: 40, level: 1, generate: createPrecedenceQuestion },
+        { id: 'parentheses', weight: 20, level: 2, generate: createParenthesesQuestion },
+        { id: 'nested-brackets', weight: 10, level: 2, generate: createNestedBracketsQuestion }
+    ]
 });
 
 export const categories = [
@@ -1857,7 +1813,10 @@ export const categories = [
             createEquivalentFractionUnit(),
             createFractionIntegerMultipleUnit(),
             createFractionAddSubUnit(),
-            createFractionAddSubUnlikeUnit()
+            createFractionAddSubUnlikeUnit(),
+            createIndependentFractionUnit(),
+            createMixedFractionPracticeUnit(),
+            createFractionStoryUnit()
         ]
     },
     {
@@ -1876,10 +1835,26 @@ export const categories = [
     {
         id: 'arithmetic',
         name: '四則運算',
-        description: '整數四則、先乘除後加減與括號規則',
+        description: '運算順序、生活應用、分配律與平均問題',
         icon: '🧮',
         color: '#7fd1b9',
-        units: [createArithmeticUnit()]
+        units: [createArithmeticUnit(), createMultiStepUnit(), createDistributiveUnit(), createAverageUnit()]
+    },
+    {
+        id: 'area',
+        name: '面積',
+        description: '辨認底與高，練習三種基本圖形的面積',
+        icon: '📐',
+        color: '#438878',
+        units: [createAreaUnit('parallelogram'), createAreaUnit('triangle'), createAreaUnit('trapezoid'), createAreaReviewUnit()]
+    },
+    {
+        id: 'symmetry',
+        name: '線對稱',
+        description: '在方格上觀察方向與距離，找出對稱點',
+        icon: '🦋',
+        color: '#557daa',
+        units: [createSymmetryUnit()]
     }
 ];
 
