@@ -1,5 +1,6 @@
 import React from 'react';
 import MathContent from './MathContent.jsx';
+import GeometryDiagram from './GeometryDiagram.jsx';
 
 const formatTimeSpent = (timeSpentMs) => {
     const timeSecs = Math.round(timeSpentMs / 1000);
@@ -62,6 +63,7 @@ function SummaryScreen({ result, onRestart }) {
                                     mathModel={item.questionMeta?.mathModel}
                                 />
                             </p>
+                            <GeometryDiagram diagram={item.questionMeta?.diagram} />
                             <div className="wrong-review-answers">
                                 <span className="wrong-review-user">
                                     你的答案: <MathContent text={item.userAnswer} />
@@ -70,6 +72,9 @@ function SummaryScreen({ result, onRestart }) {
                                     正確答案: <MathContent text={item.correctAnswer} />
                                 </span>
                             </div>
+                            {item.questionMeta?.explanation && (
+                                <p className="practice-explanation"><MathContent text={item.questionMeta.explanation} /></p>
+                            )}
                         </div>
                     ))}
                 </div>

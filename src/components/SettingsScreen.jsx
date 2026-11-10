@@ -21,12 +21,16 @@ function SettingsScreen({ categoryId, unitId, onStart, onBack }) {
                     <button
                         key={num}
                         className="btn btn-large"
+                        type="button"
                         onClick={() => onStart(num)}
                     >
-                        {num} 題
+                        {num} 題{num === 10 && unit?.practiceVariants ? '・一般練習' : ''}
                     </button>
                 ))}
 
+                {unit?.practiceVariants && (
+                    <p className="practice-session-hint">剛開始可選 5 題，熟練後選 20 題。每回合會搭配不同題型，從基礎到進階。</p>
+                )}
                 <button
                     className="btn btn-secondary"
                     style={{ marginTop: '20px' }}

@@ -1,4 +1,5 @@
 import { getCategoryById, getUnitById } from './categories.js';
+import { allocatePracticeVariants } from './practiceUtils.js';
 
 const resolveSelection = (categoryId, unitId, errorMessage) => {
     const category = getCategoryById(categoryId);
@@ -18,7 +19,22 @@ export const createQuestionSet = (categoryId, unitId, totalQuestions) => {
         `Unknown unit selection: ${categoryId}/${unitId}`
     );
 
-    return Array.from({ length: totalQuestions }, () => unit.generateQuestion());
+    if (!unit.practiceVariants) {
+        return Array.from({ length: totalQuestions }, () => unit.generateQuestion());
+    }
+
+    const seen = new Set();
+    return allocatePracticeVariants(unit.practiceVariants, totalQuestions).map((variant) => {
+        for (let attempt = 0; attempt < 200; attempt += 1) {
+            const question = unit.generateQuestion({ variantId: variant.id });
+            const key = question.meta.practiceKey ?? question.text;
+            if (!seen.has(key)) {
+                seen.add(key);
+                return question;
+            }
+        }
+        throw new Error(`Unable to generate distinct questions for ${categoryId}/${unitId}.`);
+    }).sort((left, right) => left.meta.practiceLevel - right.meta.practiceLevel);
 };
 
 export const getSelectionLabels = (categoryId, unitId) => {
